@@ -4284,11 +4284,22 @@ function App() {
       setMemoryStats(data.stats || { total: 0, by_type: {}, by_scope: {} });
       if (data.types) setMemoryTypes(data.types);
       if (data.scopes) setMemoryScopes(data.scopes);
-    } catch {}
+      return true;
+    } catch (e) {
+      console.debug('fetchMemories failed:', e.message);
+      return false;
+    }
   }, []);
 
-  // Fetch memory count on mount so the badge is visible immediately
-  useEffect(() => { fetchMemories(); }, [fetchMemories]);
+  // Fetch memory count on mount so the badge is visible immediately;
+  // retry after 2s if server wasn't ready on first attempt
+  useEffect(() => {
+    let retryTimer;
+    fetchMemories().then(ok => {
+      if (!ok) retryTimer = setTimeout(() => fetchMemories(), 2000);
+    });
+    return () => clearTimeout(retryTimer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh memories when switching to the memory tab
   useEffect(() => {
