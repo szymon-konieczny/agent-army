@@ -735,6 +735,41 @@ def create_app() -> FastAPI:
                     conversation_id, "assistant", response_text, agent=agent_name
                 )
 
+            # ── Auto-capture memory from successful interactions ───
+            if success and response_text and len(response_text) > 40:
+                try:
+                    mem_store_ref: Optional[AgentMemoryStore] = _app_state.get("memory_store")
+                    if mem_store_ref:
+                        # Build a concise memory from the exchange
+                        user_msg_short = message[:200].strip()
+                        resp_short = response_text[:300].strip()
+                        memory_content = f"User asked: {user_msg_short}\nAgent ({agent_name}): {resp_short}"
+
+                        # Classify scope by agent role
+                        scope_map = {
+                            "builder": "project", "inspector": "testing",
+                            "devops": "deployment", "sentinel": "security",
+                            "designer": "ui", "scout": "project",
+                            "scribe": "project", "linter": "project",
+                            "marketer": "project", "automator": "project",
+                            "scheduler": "project", "watcher": "project",
+                            "commander": "project",
+                        }
+                        agent_prefix = agent_name.split("-")[0] if "-" in agent_name else agent_name
+                        scope = scope_map.get(agent_prefix, "project")
+
+                        mem_store_ref.remember(
+                            content=memory_content,
+                            memory_type="context",
+                            scope=scope,
+                            tags=["chat", agent_prefix],
+                            created_by=agent_name,
+                        )
+                except Exception as mem_exc:
+                    await logger.awarning(
+                        "auto_memory_failed", error=str(mem_exc)[:200]
+                    )
+
             return {
                 "response": response_text,
                 "agent_id": agent_name,
@@ -3061,6 +3096,46 @@ async def _handle_multi_agent_chat(
     if conv_store and conversation_id:
         await conv_store.add_message(
             conversation_id, "assistant", merged, agent="multi-agent",
+        )
+
+    # ── Auto-capture memory from each successful agent response ──
+    try:
+        mem_store_ref: Optional[AgentMemoryStore] = _app_state.get("memory_store")
+        if mem_store_ref:
+            scope_map = {
+                "builder": "project", "inspector": "testing",
+                "devops": "deployment", "sentinel": "security",
+                "designer": "ui", "scout": "project",
+                "scribe": "project", "linter": "project",
+                "marketer": "project", "automator": "project",
+                "scheduler": "project", "watcher": "project",
+                "commander": "project",
+            }
+            user_msg_short = message[:200].strip()
+            for resp_entry in responses:
+                if not resp_entry.get("success"):
+                    continue
+                resp_text = resp_entry.get("response", "")
+                if len(resp_text) <= 40:
+                    continue
+                aid = resp_entry.get("agent_id", "unknown")
+                agent_prefix = aid.split("-")[0] if "-" in aid else aid
+                scope = scope_map.get(agent_prefix, "project")
+                resp_short = resp_text[:300].strip()
+                memory_content = (
+                    f"User asked: {user_msg_short}\n"
+                    f"Agent ({aid}): {resp_short}"
+                )
+                mem_store_ref.remember(
+                    content=memory_content,
+                    memory_type="context",
+                    scope=scope,
+                    tags=["chat", "multi-agent", agent_prefix],
+                    created_by=aid,
+                )
+    except Exception as mem_exc:
+        await logger.awarning(
+            "multi_agent_auto_memory_failed", error=str(mem_exc)[:200]
         )
 
     return {
