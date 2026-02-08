@@ -27,11 +27,18 @@ tell application "Calendar"
     repeat with cal in calendars
         set evts to (every event of cal whose start date >= todayStart and start date < todayEnd)
         repeat with evt in evts
-            set output to output & "- " & (summary of evt) & " | " & (start date of evt) & " → " & (end date of evt) & " | Calendar: " & (name of cal) & linefeed
+            set s to start date of evt
+            set e to end date of evt
+            set hStart to text -2 thru -1 of ("0" & (hours of s as text))
+            set mStart to text -2 thru -1 of ("0" & (minutes of s as text))
+            set hEnd to text -2 thru -1 of ("0" & (hours of e as text))
+            set mEnd to text -2 thru -1 of ("0" & (minutes of e as text))
+            set timeStr to hStart & ":" & mStart & "-" & hEnd & ":" & mEnd
+            set output to output & timeStr & " | " & (summary of evt) & " | " & (name of cal) & linefeed
         end repeat
     end repeat
     if output is "" then
-        return "No events scheduled for today."
+        return "NO_EVENTS"
     end if
     return output
 end tell
@@ -49,11 +56,18 @@ tell application "Calendar"
     repeat with cal in calendars
         set evts to (every event of cal whose start date >= tomorrowStart and start date < tomorrowEnd)
         repeat with evt in evts
-            set output to output & "- " & (summary of evt) & " | " & (start date of evt) & " → " & (end date of evt) & " | Calendar: " & (name of cal) & linefeed
+            set s to start date of evt
+            set e to end date of evt
+            set hStart to text -2 thru -1 of ("0" & (hours of s as text))
+            set mStart to text -2 thru -1 of ("0" & (minutes of s as text))
+            set hEnd to text -2 thru -1 of ("0" & (hours of e as text))
+            set mEnd to text -2 thru -1 of ("0" & (minutes of e as text))
+            set timeStr to hStart & ":" & mStart & "-" & hEnd & ":" & mEnd
+            set output to output & timeStr & " | " & (summary of evt) & " | " & (name of cal) & linefeed
         end repeat
     end repeat
     if output is "" then
-        return "No events scheduled for tomorrow."
+        return "NO_EVENTS"
     end if
     return output
 end tell
@@ -71,11 +85,22 @@ tell application "Calendar"
     repeat with cal in calendars
         set evts to (every event of cal whose start date >= weekStart and start date < weekEnd)
         repeat with evt in evts
-            set output to output & "- " & (summary of evt) & " | " & (start date of evt) & " → " & (end date of evt) & " | " & (name of cal) & linefeed
+            set s to start date of evt
+            set e to end date of evt
+            set hStart to text -2 thru -1 of ("0" & (hours of s as text))
+            set mStart to text -2 thru -1 of ("0" & (minutes of s as text))
+            set hEnd to text -2 thru -1 of ("0" & (hours of e as text))
+            set mEnd to text -2 thru -1 of ("0" & (minutes of e as text))
+            set timeStr to hStart & ":" & mStart & "-" & hEnd & ":" & mEnd
+            set d to s
+            set m to (month of d as integer)
+            set dayNum to day of d
+            set dateStr to (year of d as text) & "-" & text -2 thru -1 of ("0" & (m as text)) & "-" & text -2 thru -1 of ("0" & (dayNum as text))
+            set output to output & dateStr & " " & timeStr & " | " & (summary of evt) & " | " & (name of cal) & linefeed
         end repeat
     end repeat
     if output is "" then
-        return "No events this week."
+        return "NO_EVENTS"
     end if
     return output
 end tell
@@ -526,6 +551,26 @@ class SchedulerAgent(BaseAgent):
             "- When creating events, ask which calendar to use\n"
             "- For timesheet workflows, categorize events by project/client based on title\n"
             "- Respect privacy — never share calendar details with other agents without permission\n"
+        )
+
+        sections.append(
+            "## RESPONSE FORMATTING\n"
+            "Always format responses using clean **Markdown**. Never output raw pipe-delimited data.\n"
+            "For event lists, use this format:\n\n"
+            "### 📅 Monday, Feb 16\n"
+            "| Time | Event | Calendar |\n"
+            "|------|-------|----------|\n"
+            "| 11:00 – 12:00 | Team standup | Work |\n"
+            "| 14:00 – 15:00 | Review meeting | Personal |\n\n"
+            "### 📅 Tuesday, Feb 17\n"
+            "| Time | Event | Calendar |\n"
+            "|------|-------|----------|\n"
+            "| All day | Holiday — Mardi Gras | Holidays |\n\n"
+            "If no events found, show a friendly message like:\n"
+            "> ✨ **No events scheduled** — your week is wide open!\n\n"
+            "For free time, show available slots clearly.\n"
+            "For errors (e.g. Google Calendar not connected), show a brief note with a fix suggestion.\n"
+            "Keep responses concise. Don't dump raw command output — always parse and reformat it.\n"
         )
 
         return "\n\n".join(sections)
