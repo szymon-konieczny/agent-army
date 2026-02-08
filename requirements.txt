@@ -1,0 +1,31 @@
+# AgentArmy LLM Integration and Communication Bridge
+# Production-quality dependencies
+
+# Core async HTTP client
+httpx>=0.24.0
+
+# Anthropic Claude API client
+anthropic>=0.7.0
+
+# Data validation with Pydantic v2
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Structured logging
+structlog>=23.0.0
+
+# Async utilities
+python-dateutil>=2.8.0
+
+# E2E testing with Playwright (Chromium auto-installed on first startup)
+playwright>=1.40.0
+
+# For development and testing (optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+httpx-stubs>=0.4.0
+
+# Optional: for production deployments
+gunicorn>=21.0.0
+python-dotenv>=1.0.0

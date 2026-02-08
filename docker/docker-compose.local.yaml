@@ -1,0 +1,99 @@
+# ============================================================================
+# AgentArmy — Local Development (macOS)
+# ============================================================================
+# Only infrastructure services. The Python app runs NATIVELY for fast
+# iteration, hot-reload, and debugger support.
+#
+# Usage:
+#   docker compose -f docker/docker-compose.local.yaml up -d
+#
+# Ollama runs natively on macOS (not in Docker) to leverage Apple Silicon
+# GPU / Neural Engine acceleration.
+# ============================================================================
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: aa-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: aa-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Management UI → http://localhost:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: agent
+      RABBITMQ_DEFAULT_PASS: agent_local_dev
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: aa-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: agentadmin
+      POSTGRES_PASSWORD: localdev_secure_2026
+      POSTGRES_DB: agent_army
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentadmin -d agent_army"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: aa-neo4j
+    ports:
+      - "7474:7474"   # Browser UI → http://localhost:7474
+      - "7687:7687"   # Bolt protocol
+    environment:
+      NEO4J_AUTH: neo4j/localdev_neo4j_2026
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+  postgres-data:
+    driver: local
+  neo4j-data:
+    driver: local
+  neo4j-logs:
+    driver: local

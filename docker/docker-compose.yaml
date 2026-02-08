@@ -1,0 +1,323 @@
+version: '3.9'
+
+services:
+  # External infrastructure
+  redis:
+    image: redis:7-alpine
+    container_name: agent-army-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - agent-net
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: agent-army-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - agent-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: agent-army-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-agentadmin}
+      POSTGRES_PASSWORD: ${DB_PASS:-securepassword}
+      POSTGRES_DB: ${DB_NAME:-agent_army}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - agent-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agentadmin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # API Gateway
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: agent-army-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      JWT_SECRET: ${JWT_SECRET}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
+    networks:
+      - agent-net
+      - gateway-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Commander Agent - Orchestration control
+  commander:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: agent-army-commander
+    environment:
+      AGENT_TYPE: commander
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      AGENT_PRIVATE_KEY: ${COMMANDER_PRIVATE_KEY}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    networks:
+      - agent-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9000))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Sentinel Agent - Security monitoring
+  sentinel:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: agent-army-sentinel
+    environment:
+      AGENT_TYPE: sentinel
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/2
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      AGENT_PRIVATE_KEY: ${SENTINEL_PRIVATE_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    networks:
+      - agent-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.75'
+          memory: 750M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9000))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Builder Agent - Development and builds
+  builder:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: agent-army-builder
+    environment:
+      AGENT_TYPE: builder
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/3
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      AGENT_PRIVATE_KEY: ${BUILDER_PRIVATE_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+    volumes:
+      - builder-cache:/home/agentuser/.cache
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - agent-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 4G
+        reservations:
+          cpus: '1.5'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9000))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Inspector Agent - Testing and QA
+  inspector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: agent-army-inspector
+    environment:
+      AGENT_TYPE: inspector
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/4
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      AGENT_PRIVATE_KEY: ${INSPECTOR_PRIVATE_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    volumes:
+      - inspector-cache:/home/agentuser/.cache
+    networks:
+      - agent-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9000))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Watcher Agent - Monitoring and logging
+  watcher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    container_name: agent-army-watcher
+    environment:
+      AGENT_TYPE: watcher
+      AGENT_ENV: ${AGENT_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/5
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      AGENT_PRIVATE_KEY: ${WATCHER_PRIVATE_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    networks:
+      - agent-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 500M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 9000))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  agent-net:
+    name: agent-army-internal
+    driver: bridge
+    internal: true
+
+  gateway-net:
+    name: agent-army-gateway
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
+  rabbitmq-data:
+    driver: local
+  postgres-data:
+    driver: local
+  builder-cache:
+    driver: local
+  inspector-cache:
+    driver: local

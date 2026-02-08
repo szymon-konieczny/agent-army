@@ -1,0 +1,249 @@
+# Inspector Agent Configuration
+# Role: Quality assurance, testing, and code analysis
+
+agent:
+  id: "inspector"
+  name: "Inspector"
+  version: "1.0.0"
+  description: "Quality assurance and testing orchestration agent"
+  enabled: true
+
+# Capabilities and permissions
+capabilities:
+  # Test execution
+  test_execution:
+    enabled: true
+    actions:
+      - "run_unit_tests"
+      - "run_integration_tests"
+      - "run_end_to_end_tests"
+      - "run_performance_tests"
+      - "run_load_tests"
+      - "collect_coverage"
+      - "generate_test_report"
+    test_frameworks:
+      - "pytest"
+      - "unittest"
+      - "nose"
+      - "jest"
+      - "mocha"
+    max_test_timeout: "1800s"
+    max_concurrent_tests: 5
+
+  # Code analysis
+  code_analysis:
+    enabled: true
+    actions:
+      - "static_analysis"
+      - "lint_code"
+      - "check_code_quality"
+      - "analyze_dependencies"
+      - "detect_code_smells"
+      - "check_complexity"
+      - "security_analysis"
+    analyzers:
+      - "pylint"
+      - "flake8"
+      - "bandit"
+      - "eslint"
+      - "sonarqube"
+
+  # Report generation
+  report_generation:
+    enabled: true
+    actions:
+      - "generate_test_report"
+      - "generate_coverage_report"
+      - "generate_analysis_report"
+      - "generate_performance_report"
+      - "export_test_results"
+    report_formats:
+      - "json"
+      - "html"
+      - "xml"
+      - "csv"
+
+  # Filesystem access - read-only to source and test directories
+  filesystem_access:
+    enabled: true
+    access_level: "read-only"
+    actions:
+      - "read_file"
+      - "list_directory"
+      - "get_file_stats"
+    allowed_paths:
+      - "/app/src"
+      - "/app/tests"
+      - "/app/build"
+    forbidden_paths:
+      - "/root"
+      - "/etc"
+      - "/var/lib/postgresql"
+
+  # LLM access for test analysis and suggestions
+  llm_access:
+    enabled: true
+    models:
+      - "claude-3-5-sonnet"
+    max_tokens_per_request: 6000
+    max_tokens_per_day: 600000
+    actions:
+      - "analyze_test_failures"
+      - "suggest_test_improvements"
+      - "generate_test_cases"
+      - "explain_code_issues"
+      - "summarize_test_results"
+
+  # Notification capabilities
+  notifications:
+    enabled: true
+    channels:
+      - type: "whatsapp"
+        filter: "test_failure"
+      - type: "slack"
+        filter: "all"
+      - type: "webhook"
+        filter: "all"
+
+# Resource limits
+resource_limits:
+  cpu:
+    request: "1"
+    limit: "2"
+  memory:
+    request: "1Gi"
+    limit: "2Gi"
+  storage:
+    request: "30Gi"
+    limit: "100Gi"
+
+# Token usage limits
+token_limits:
+  max_tokens_per_day: 600000
+  max_tokens_per_hour: 30000
+  max_tokens_per_request: 6000
+  rate_limit_window: 3600
+
+# Approval requirements
+requires_approval_for:
+  # None - Inspector has read-only access
+
+# Audit and logging
+audit:
+  enabled: true
+  log_level: "INFO"
+  log_all_test_runs: true
+  sensitive_fields_redacted: true
+  fields_to_redact:
+    - "api_key"
+    - "token"
+    - "secret"
+    - "password"
+
+# Dependencies
+depends_on:
+  - "redis"
+  - "rabbitmq"
+  - "postgres"
+
+# Healthcheck configuration
+healthcheck:
+  enabled: true
+  endpoint: "http://localhost:9000/health"
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Startup configuration
+startup:
+  startup_timeout: 30s
+  healthcheck_delay: 5s
+  priority: 4
+
+# Test configuration
+testing:
+  default_test_framework: "pytest"
+  parallel_execution: true
+  max_parallel_jobs: 5
+  fail_on_coverage_drop: true
+  coverage_threshold: 80
+  timeout_per_test: 300
+  retry_failed_tests: true
+  max_retries: 2
+
+# Coverage configuration
+coverage:
+  enabled: true
+  minimum_coverage: 80
+  exclude_paths:
+    - "tests/*"
+    - "setup.py"
+    - "__pycache__"
+    - "*.pyc"
+  fail_under_minimum: true
+
+# Quality gates
+quality_gates:
+  enabled: true
+  checks:
+    - name: "minimum_coverage"
+      threshold: 80
+      action: "fail_build"
+
+    - name: "passing_tests"
+      action: "fail_build"
+
+    - name: "code_duplication"
+      threshold: 5
+      action: "warn_only"
+
+    - name: "complexity"
+      threshold: 10
+      action: "warn_only"
+
+# Notifications
+notifications_config:
+  enabled: true
+  on_test_failure: true
+  on_coverage_drop: true
+  on_code_smells: true
+  channels:
+    - type: "slack"
+      webhook_env: "SLACK_WEBHOOK_URL"
+    - type: "whatsapp"
+      enabled: true
+
+# Scheduling
+scheduling:
+  enabled: true
+  jobs:
+    - name: "nightly_full_test_suite"
+      schedule: "0 2 * * *"
+      action: "run_full_test_suite"
+
+    - name: "daily_code_analysis"
+      schedule: "0 6 * * *"
+      action: "run_code_analysis"
+
+    - name: "weekly_performance_test"
+      schedule: "0 3 * * 0"
+      action: "run_performance_tests"
+
+    - name: "hourly_critical_tests"
+      schedule: "0 * * * *"
+      action: "run_critical_tests"
+
+# Performance testing configuration
+performance_testing:
+  enabled: true
+  memory_limit: "2Gi"
+  cpu_limit: "2"
+  target_response_time_ms: 500
+  target_throughput_rps: 1000
+
+# Test result archival
+archival:
+  enabled: true
+  retention_days: 30
+  archive_location: "/app/artifacts/test-results"
+  compress_archives: true

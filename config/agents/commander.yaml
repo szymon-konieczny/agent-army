@@ -1,0 +1,178 @@
+# Commander Agent Configuration
+# Role: Master orchestrator and controller of all agents
+
+agent:
+  id: "commander"
+  name: "Commander"
+  version: "1.0.0"
+  description: "Master orchestrator for agent coordination and system control"
+  enabled: true
+
+# Capabilities and permissions
+capabilities:
+  # Agent lifecycle management
+  agent_lifecycle:
+    enabled: true
+    actions:
+      - "start_agent"
+      - "stop_agent"
+      - "restart_agent"
+      - "get_agent_status"
+      - "get_agent_metrics"
+      - "scale_agent_replicas"
+
+  # Workflow orchestration
+  workflow_orchestration:
+    enabled: true
+    actions:
+      - "create_workflow"
+      - "execute_workflow"
+      - "pause_workflow"
+      - "resume_workflow"
+      - "cancel_workflow"
+      - "get_workflow_status"
+      - "monitor_workflow"
+
+  # Message queue access - full access to all queues
+  queue_access:
+    enabled: true
+    access_level: "full"
+    exchanges:
+      - "agent-commands"
+      - "agent-responses"
+      - "system-events"
+      - "alerts"
+    actions:
+      - "publish"
+      - "consume"
+      - "acknowledge"
+      - "reject"
+      - "purge"
+
+  # LLM access - all available models
+  llm_access:
+    enabled: true
+    models:
+      - "claude-3-5-sonnet"
+      - "claude-opus-4-6"
+      - "ollama-mistral"
+    max_tokens_per_request: 8000
+    max_tokens_per_day: 1000000
+    actions:
+      - "complete_text"
+      - "analyze_code"
+      - "generate_summary"
+      - "translate_text"
+
+  # WhatsApp messaging - can send system messages and alerts
+  whatsapp_messaging:
+    enabled: true
+    actions:
+      - "send_message"
+      - "send_media"
+      - "send_template"
+    rate_limit: "100 messages per hour"
+    templates:
+      - "system-alert"
+      - "deployment-status"
+      - "security-incident"
+      - "workflow-completion"
+
+  # Emergency override capabilities
+  emergency_override:
+    enabled: true
+    actions:
+      - "force_stop_workflow"
+      - "force_stop_agent"
+      - "trigger_emergency_shutdown"
+      - "escalate_to_human"
+    requires_audit_log: true
+
+  # System administration
+  system_admin:
+    enabled: true
+    actions:
+      - "read_system_config"
+      - "update_system_config"
+      - "manage_security_policies"
+      - "manage_agent_policies"
+      - "view_audit_logs"
+      - "manage_backups"
+
+# Resource limits
+resource_limits:
+  cpu:
+    request: "1"
+    limit: "2"
+  memory:
+    request: "1Gi"
+    limit: "2Gi"
+  storage:
+    request: "10Gi"
+    limit: "50Gi"
+
+# Token usage limits
+token_limits:
+  max_tokens_per_day: 1000000
+  max_tokens_per_hour: 50000
+  max_tokens_per_request: 8000
+  rate_limit_window: 3600
+
+# Approval requirements
+requires_approval_for:
+  # None - commander has full autonomy for orchestration
+
+# Notifications and alerting
+notifications:
+  enabled: true
+  channels:
+    - type: "whatsapp"
+      filter: "critical,high"
+    - type: "email"
+      filter: "critical"
+    - type: "webhook"
+      filter: "all"
+      url_env: "WEBHOOK_URL"
+
+# Audit and logging
+audit:
+  enabled: true
+  log_level: "DEBUG"
+  log_all_actions: true
+  sensitive_fields_redacted: true
+  fields_to_redact:
+    - "api_key"
+    - "token"
+    - "secret"
+    - "password"
+
+# Dependencies
+depends_on:
+  - "redis"
+  - "rabbitmq"
+  - "postgres"
+
+# Healthcheck configuration
+healthcheck:
+  enabled: true
+  endpoint: "http://localhost:9000/health"
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Startup configuration
+startup:
+  startup_timeout: 30s
+  healthcheck_delay: 5s
+  priority: 1  # Start first among agents
+
+# Scheduling
+scheduling:
+  enabled: true
+  jobs:
+    - name: "hourly_system_check"
+      schedule: "0 * * * *"
+      action: "system_health_check"
+    - name: "daily_audit_report"
+      schedule: "0 2 * * *"
+      action: "generate_audit_report"

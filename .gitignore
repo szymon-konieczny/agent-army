@@ -1,0 +1,116 @@
+# ── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+sdist/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment & secrets ──────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.*.local
+keys/
+*.pem
+
+# ── Node.js ────────────────────────────────────────────────────
+node_modules/
+package-lock.json
+yarn.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Generated files ────────────────────────────────────────────
+src/generated/
+
+# ── Generated documentation ────────────────────────────────────
+docs/_build/
+*.docx
+*_Preview.html
+AGENTS_IMPLEMENTATION.md
+AGENT_API_REFERENCE.md
+IMPLEMENTATION_SUMMARY.txt
+README_IMPLEMENTATION.md
+FILES_CREATED.md
+FINAL_DELIVERY.md
+SUMMARY.txt
+INDEX.md
+ARCHITECTURE_DIAGRAM.txt
+CREATED_FILES_SUMMARY.txt
+MCP_FILES_MANIFEST.txt
+NEW_FILES_MANIFEST.txt
+AUTONOMOUS_*.md
+IMPLEMENTATION_*.md
+MCP_QUICKSTART.md
+
+# ── IDE & editors ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# ── OS files ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# ── Docker volumes & local data ────────────────────────────────
+data/
+logs/
+artifacts/
+backups/
+tmp/
+temp/
+
+# ── Testing & code quality ─────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# ── Desktop app builds ─────────────────────────────────────────
+*.app
+*.app/
+*.exe
+*.dmg
+*.msi
+*.zip
+
+# ── Playwright & browser automation ────────────────────────────
+playwright-state/
+browser-data/
+screenshots/
+*.har
+
+# ── Database files ─────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Misc ───────────────────────────────────────────────────────
+*.log
+*.pid
+*.seed
+.cache/

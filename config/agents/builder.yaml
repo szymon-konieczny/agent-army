@@ -1,0 +1,300 @@
+# Builder Agent Configuration
+# Role: Code development, building, and deployment coordination
+
+agent:
+  id: "builder"
+  name: "Builder"
+  version: "1.0.0"
+  description: "Development and build orchestration agent"
+  enabled: true
+
+# Capabilities and permissions
+capabilities:
+  # Git repository access
+  git_access:
+    enabled: true
+    actions:
+      - "clone_repository"
+      - "read_repository"
+      - "write_repository"
+      - "commit_code"
+      - "create_branch"
+      - "delete_branch"
+      - "merge_branches"
+      - "push_code"
+      - "pull_code"
+      - "create_pull_request"
+      - "review_pull_request"
+      - "list_commits"
+      - "get_commit_history"
+    forbidden_actions:
+      - "force_push_main"
+      - "force_push_production"
+      - "delete_main_branch"
+      - "delete_production_branch"
+    branch_rules:
+      - branch: "main"
+        allow_merge_only: true
+        allow_force_push: false
+      - branch: "production"
+        allow_merge_only: true
+        allow_force_push: false
+      - branch: "*"
+        allow_merge_only: false
+        allow_force_push: true
+
+  # Filesystem access
+  filesystem_access:
+    enabled: true
+    access_level: "read-write"
+    actions:
+      - "read_file"
+      - "write_file"
+      - "create_file"
+      - "delete_file"
+      - "create_directory"
+      - "delete_directory"
+      - "copy_file"
+      - "move_file"
+      - "list_directory"
+    allowed_paths:
+      - "/app/src"
+      - "/app/tests"
+      - "/app/build"
+      - "/app/artifacts"
+    forbidden_paths:
+      - "/root"
+      - "/etc"
+      - "/sys"
+      - "/proc"
+      - "/var/lib/postgresql"
+
+  # Build execution
+  build_execution:
+    enabled: true
+    actions:
+      - "run_build"
+      - "run_tests"
+      - "run_linter"
+      - "run_formatter"
+      - "run_security_check"
+      - "generate_coverage"
+      - "create_artifacts"
+    build_tools:
+      - "make"
+      - "python"
+      - "pip"
+      - "docker"
+      - "npm"
+    max_build_timeout: "3600s"
+    max_concurrent_builds: 3
+
+  # Network access
+  network_access:
+    enabled: true
+    allowed_hosts:
+      - "github.com"
+      - "api.github.com"
+      - "pypi.org"
+      - "files.pythonhosted.org"
+      - "npmjs.org"
+      - "registry.npmjs.org"
+      - "registry.yarnpkg.com"
+      - "artifactory.example.com"
+
+  # LLM access for code analysis and generation
+  llm_access:
+    enabled: true
+    models:
+      - "claude-3-5-sonnet"
+      - "claude-opus-4-6"
+    max_tokens_per_request: 8000
+    max_tokens_per_day: 800000
+    actions:
+      - "analyze_code"
+      - "generate_code"
+      - "refactor_code"
+      - "explain_code"
+      - "suggest_improvements"
+      - "fix_bugs"
+
+  # Docker access
+  docker_access:
+    enabled: true
+    actions:
+      - "build_image"
+      - "push_image"
+      - "pull_image"
+      - "run_container"
+      - "stop_container"
+      - "list_images"
+      - "list_containers"
+    docker_registry: "docker.io"
+    registry_credentials_env: "DOCKER_REGISTRY_CREDS"
+
+  # Artifact management
+  artifact_management:
+    enabled: true
+    actions:
+      - "upload_artifact"
+      - "download_artifact"
+      - "list_artifacts"
+      - "delete_artifact"
+      - "publish_artifact"
+    storage_path: "/app/artifacts"
+    max_artifact_size: "5Gi"
+
+# Resource limits
+resource_limits:
+  cpu:
+    request: "1.5"
+    limit: "3"
+  memory:
+    request: "2Gi"
+    limit: "4Gi"
+  storage:
+    request: "50Gi"
+    limit: "200Gi"
+
+# Token usage limits
+token_limits:
+  max_tokens_per_day: 800000
+  max_tokens_per_hour: 40000
+  max_tokens_per_request: 8000
+  rate_limit_window: 3600
+
+# Approval requirements - these actions need explicit approval
+requires_approval_for:
+  - "deploy_to_production"
+  - "deploy_to_staging"
+  - "modify_ci_cd_pipeline"
+  - "delete_branch"
+  - "force_push"
+  - "delete_artifact"
+  - "publish_artifact_to_public"
+
+# Notification and messaging
+notifications:
+  enabled: true
+  channels:
+    - type: "whatsapp"
+      filter: "build_failure,deployment"
+    - type: "webhook"
+      filter: "all"
+    - type: "slack"
+      filter: "all"
+
+# Audit and logging
+audit:
+  enabled: true
+  log_level: "INFO"
+  log_builds: true
+  log_deployments: true
+  sensitive_fields_redacted: true
+  fields_to_redact:
+    - "api_key"
+    - "token"
+    - "secret"
+    - "password"
+    - "github_token"
+    - "docker_credentials"
+
+# Dependencies
+depends_on:
+  - "redis"
+  - "rabbitmq"
+  - "postgres"
+
+# Healthcheck configuration
+healthcheck:
+  enabled: true
+  endpoint: "http://localhost:9000/health"
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Startup configuration
+startup:
+  startup_timeout: 30s
+  healthcheck_delay: 5s
+  priority: 3
+
+# Build configuration
+build:
+  default_build_tool: "make"
+  build_timeout: 3600
+  parallel_builds: 3
+  cache_build_artifacts: true
+  cache_location: "/home/agentuser/.cache"
+  cleanup_on_success: true
+  cleanup_on_failure: false
+
+# CI/CD pipeline integration
+ci_cd:
+  enabled: true
+  providers:
+    - "github_actions"
+    - "gitlab_ci"
+  webhook_path: "/webhooks/ci-cd"
+  auto_trigger_on_push: true
+  auto_trigger_branches:
+    - "main"
+    - "develop"
+    - "release/*"
+
+# Code quality gates
+quality_gates:
+  enabled: true
+  checks:
+    - name: "test_coverage"
+      threshold: 80
+      action: "fail_build"
+    - name: "linting"
+      action: "fail_build"
+    - name: "security_scan"
+      action: "fail_build"
+    - name: "code_smells"
+      threshold: 0
+      action: "warn_only"
+
+# Deployment configuration
+deployment:
+  enabled: true
+  strategies:
+    - name: "blue_green"
+      description: "Blue-green deployment"
+      automated: false
+    - name: "canary"
+      description: "Canary deployment"
+      automated: false
+      canary_percentage: 10
+    - name: "rolling"
+      description: "Rolling deployment"
+      automated: false
+      batch_size: 1
+  default_strategy: "blue_green"
+  environments:
+    - name: "development"
+      auto_deploy: true
+    - name: "staging"
+      auto_deploy: false
+      requires_approval: true
+    - name: "production"
+      auto_deploy: false
+      requires_approval: true
+
+# Scheduling
+scheduling:
+  enabled: true
+  jobs:
+    - name: "nightly_build"
+      schedule: "0 2 * * *"
+      action: "run_full_build"
+
+    - name: "dependency_update"
+      schedule: "0 3 * * 0"
+      action: "update_dependencies"
+
+    - name: "security_scan"
+      schedule: "0 4 * * *"
+      action: "run_security_scan"

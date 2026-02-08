@@ -1,0 +1,246 @@
+# AgentArmy System Configuration
+system:
+  name: "AgentArmy"
+  version: "1.0.0"
+  environment: "${AGENT_ENV:development}"
+  log_level: "${LOG_LEVEL:INFO}"
+
+# Agent definitions and roles
+agents:
+  commander:
+    role: "orchestration"
+    description: "Master orchestrator and controller"
+    enabled: true
+    priority: 100
+    capabilities:
+      - "agent_lifecycle_management"
+      - "workflow_orchestration"
+      - "all_queue_access"
+      - "whatsapp_messaging"
+      - "emergency_override"
+    resource_limits:
+      max_cpu: "2"
+      max_memory: "2Gi"
+      max_tokens_per_day: 1000000
+
+  sentinel:
+    role: "security"
+    description: "Security monitoring and threat detection"
+    enabled: true
+    priority: 90
+    capabilities:
+      - "read_all_repos"
+      - "read_all_systems"
+      - "security_audit"
+      - "filesystem_scan"
+      - "network_monitoring"
+      - "alert_triggering"
+    resource_limits:
+      max_cpu: "1.5"
+      max_memory: "1.5Gi"
+      max_tokens_per_day: 500000
+
+  builder:
+    role: "development"
+    description: "Code development and building"
+    enabled: true
+    priority: 50
+    capabilities:
+      - "git_read"
+      - "git_write"
+      - "build_execution"
+      - "test_execution"
+      - "filesystem_read"
+      - "filesystem_write"
+      - "llm_access"
+    resource_limits:
+      max_cpu: "3"
+      max_memory: "4Gi"
+      max_tokens_per_day: 800000
+    requires_approval:
+      - "deploy_to_production"
+      - "modify_ci_cd"
+      - "delete_branch"
+      - "force_push"
+
+  inspector:
+    role: "testing"
+    description: "Quality assurance and testing"
+    enabled: true
+    priority: 40
+    capabilities:
+      - "test_execution"
+      - "code_analysis"
+      - "report_generation"
+      - "llm_access"
+    resource_limits:
+      max_cpu: "2"
+      max_memory: "2Gi"
+      max_tokens_per_day: 600000
+
+  watcher:
+    role: "monitoring"
+    description: "System monitoring and logging"
+    enabled: true
+    priority: 30
+    capabilities:
+      - "log_aggregation"
+      - "metrics_collection"
+      - "system_monitoring"
+      - "alert_notification"
+    resource_limits:
+      max_cpu: "1"
+      max_memory: "1Gi"
+      max_tokens_per_day: 400000
+
+# Routing rules for multi-model LLM access
+llm_routing:
+  default_model: "claude-3-5-sonnet"
+  fallback_model: "ollama-mistral"
+  models:
+    - name: "claude-3-5-sonnet"
+      provider: "anthropic"
+      api_key_env: "CLAUDE_API_KEY"
+      enabled: true
+      priority: 100
+      agents:
+        - "commander"
+        - "sentinel"
+        - "builder"
+        - "inspector"
+        - "watcher"
+      max_concurrent: 5
+      rate_limit: "100 requests per minute"
+
+    - name: "claude-opus-4-6"
+      provider: "anthropic"
+      api_key_env: "CLAUDE_API_KEY"
+      enabled: true
+      priority: 90
+      agents:
+        - "commander"
+        - "builder"
+      max_concurrent: 3
+      rate_limit: "50 requests per minute"
+
+    - name: "ollama-mistral"
+      provider: "ollama"
+      base_url: "http://ollama:11434"
+      enabled: false
+      priority: 50
+      agents:
+        - "builder"
+        - "inspector"
+      max_concurrent: 10
+      rate_limit: "unlimited"
+
+# WhatsApp command definitions
+whatsapp_commands:
+  enabled: true
+  token_env: "WHATSAPP_TOKEN"
+  webhook_path: "/webhooks/whatsapp"
+  commands:
+    - command: "/status"
+      handler: "commander.status_check"
+      description: "Get system status"
+      required_agents:
+        - "commander"
+
+    - command: "/deploy"
+      handler: "commander.deploy_workflow"
+      description: "Trigger deployment"
+      required_agents:
+        - "commander"
+        - "builder"
+      requires_approval: true
+
+    - command: "/alert"
+      handler: "commander.alert_handler"
+      description: "Acknowledge and manage alerts"
+      required_agents:
+        - "commander"
+
+    - command: "/logs"
+      handler: "watcher.log_query"
+      description: "Query system logs"
+      required_agents:
+        - "watcher"
+        - "commander"
+
+    - command: "/scan"
+      handler: "sentinel.security_scan"
+      description: "Trigger security scan"
+      required_agents:
+        - "sentinel"
+        - "commander"
+
+# Monitoring and health check intervals
+monitoring:
+  health_check_interval: 30s
+  metrics_collection_interval: 60s
+  log_aggregation_interval: 10s
+  alert_check_interval: 5s
+  cleanup_interval: 3600s
+
+# Queue configuration
+message_queue:
+  type: "rabbitmq"
+  url_env: "RABBITMQ_URL"
+  exchanges:
+    - name: "agent-commands"
+      type: "topic"
+      durable: true
+    - name: "agent-responses"
+      type: "topic"
+      durable: true
+    - name: "system-events"
+      type: "fanout"
+      durable: true
+    - name: "alerts"
+      type: "topic"
+      durable: true
+
+# Cache configuration
+cache:
+  type: "redis"
+  url_env: "REDIS_URL"
+  ttl: 3600
+  key_prefix: "agent-army:"
+
+# Database configuration
+database:
+  type: "postgresql"
+  url_env: "DATABASE_URL"
+  pool_size: 20
+  max_overflow: 10
+  echo: false
+
+# API configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8000"
+
+# Security settings
+security:
+  jwt_secret_env: "JWT_SECRET"
+  jwt_algorithm: "HS256"
+  jwt_expiration_hours: 24
+  agent_key_algorithm: "Ed25519"
+  enable_request_signing: true
+  enable_response_verification: true
+
+# Logging configuration
+logging:
+  format: "json"
+  output: "stdout"
+  default_level: "INFO"
+  agent_levels:
+    commander: "DEBUG"
+    sentinel: "DEBUG"
+    builder: "INFO"
+    inspector: "INFO"
+    watcher: "INFO"

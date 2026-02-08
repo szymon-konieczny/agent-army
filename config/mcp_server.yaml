@@ -1,0 +1,232 @@
+# AgentArmy MCP Server Configuration
+#
+# This configuration defines how the AgentArmy MCP server behaves,
+# what transports it supports, and how it connects to dependencies.
+#
+# The MCP server exposes AgentArmy capabilities via the Model Context Protocol,
+# allowing external AI tools (Claude Code, Claude Desktop, Cursor, etc.) to
+# interact with the agent fleet.
+
+server:
+  # Server identity
+  name: "agentarmy"
+  version: "1.0.0"
+  description: "AgentArmy — autonomous AI agent fleet via Model Context Protocol"
+
+  # Server capabilities and metadata
+  metadata:
+    author: "AgentArmy Contributors"
+    github: "https://github.com/agentarmy/agentarmy"
+    documentation: "https://agentarmy.dev"
+
+  # Transport configuration
+  transport:
+    # Enable stdio transport (recommended for Claude Desktop, Claude Code)
+    stdio:
+      enabled: true
+      description: "Direct stdin/stdout communication"
+
+    # Enable SSE (Server-Sent Events) HTTP transport
+    sse:
+      enabled: true
+      description: "HTTP streaming via Server-Sent Events"
+      host: "0.0.0.0"
+      port: 8001
+      path: "/sse"
+      # TLS configuration (optional)
+      tls:
+        enabled: false
+        cert_path: null
+        key_path: null
+
+# External MCP servers that AgentArmy agents can consume
+#
+# Add MCP servers here that you want AgentArmy agents to have access to.
+# Example:
+#   - name: "github"
+#     transport: "sse"
+#     config:
+#       url: "http://localhost:3000"
+#
+#   - name: "filesystem"
+#     transport: "stdio"
+#     config:
+#       command: "python"
+#       args: ["-m", "mcp.servers.filesystem", "/workspace"]
+#
+#   - name: "database"
+#     transport: "streamable-http"
+#     config:
+#       url: "http://localhost:8002"
+#
+external_servers: []
+
+# AgentArmy API backend configuration
+api:
+  # Base URL for AgentArmy HTTP API
+  base_url: "http://localhost:8000"
+
+  # API request timeout in seconds
+  timeout: 30
+
+  # Enable automatic retries for failed requests
+  retry:
+    enabled: true
+    max_attempts: 3
+    backoff_factor: 2.0  # Exponential backoff multiplier
+
+  # TLS/SSL configuration
+  tls:
+    enabled: false
+    verify_ssl: true
+    ca_path: null
+
+# Redis configuration (optional, for caching and real-time status)
+redis:
+  # Connection URL
+  url: "redis://localhost:6379/0"
+
+  # Enable/disable Redis usage
+  enabled: false
+
+  # Redis key prefix for AgentArmy data
+  key_prefix: "agentarmy:"
+
+  # Connection pool settings
+  pool:
+    max_connections: 10
+    min_idle: 2
+
+# Neo4j Knowledge Graph configuration (optional)
+neo4j:
+  # Connection URI
+  uri: "bolt://localhost:7687"
+
+  # Authentication
+  user: "neo4j"
+  # Password from environment variable: AGENTARMY_NEO4J_PASSWORD
+  password: "${AGENTARMY_NEO4J_PASSWORD}"
+
+  # Connection settings
+  encrypted: false
+  trust: "TRUST_ALL_CERTIFICATES"
+
+  # Max connection pool size
+  max_pool_size: 50
+
+  # Connection timeout in seconds
+  connection_timeout: 30
+
+# Logging configuration
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: "INFO"
+
+  # Log format
+  format: "json"  # or "text"
+
+  # Log destinations
+  outputs:
+    - type: "console"
+      level: "INFO"
+
+    - type: "file"
+      level: "DEBUG"
+      path: "logs/mcp_server.log"
+      max_size_mb: 100
+      backup_count: 5
+
+  # Structured logging with structlog
+  structlog:
+    enabled: true
+    processors:
+      - "json"
+
+# Security configuration
+security:
+  # Enable authentication for MCP server
+  authentication:
+    enabled: false
+    # Supported: "none", "api_key", "oauth2"
+    method: "none"
+    # API key for authentication (if method is api_key)
+    api_key: "${AGENTARMY_MCP_API_KEY}"
+
+  # Enable encryption for communication
+  encryption:
+    enabled: false
+    algorithm: "AES-256-GCM"
+    key: "${AGENTARMY_MCP_ENCRYPTION_KEY}"
+
+  # Rate limiting
+  rate_limit:
+    enabled: false
+    requests_per_minute: 1000
+
+  # CORS configuration
+  cors:
+    enabled: true
+    allowed_origins:
+      - "http://localhost:*"
+      - "http://127.0.0.1:*"
+      - "app://claude-desktop"
+
+# Tool configuration
+tools:
+  # Timeout for tool execution (seconds)
+  execution_timeout: 60
+
+  # Max concurrent tool calls
+  max_concurrent_calls: 10
+
+  # Enable tool caching
+  caching:
+    enabled: true
+    ttl_seconds: 300
+
+# Resource configuration
+resources:
+  # Max resource size (bytes)
+  max_size_bytes: 10485760  # 10 MB
+
+  # Allowed resource types
+  allowed_types:
+    - "application/json"
+    - "text/plain"
+    - "text/markdown"
+
+# Prompt configuration
+prompts:
+  # Enable prompt caching
+  caching:
+    enabled: true
+    ttl_seconds: 3600
+
+# System configuration
+system:
+  # Health check interval (seconds)
+  health_check_interval: 60
+
+  # Task queue settings
+  task_queue:
+    max_size: 10000
+    persistence: false
+
+  # Metrics collection
+  metrics:
+    enabled: true
+    export_interval: 60
+
+# Development configuration (for local testing)
+development:
+  # Enable debug mode
+  debug: false
+
+  # Allow introspection endpoints
+  introspection_enabled: true
+
+  # Print all API calls
+  verbose_logging: false
+
+  # Mock external services (for testing without API running)
+  mock_api: false

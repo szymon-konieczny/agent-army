@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+"""
+Build a macOS .app bundle for AgentArmy Command Center.
+
+Creates:
+  dist/AgentArmy.app/
+    Contents/
+      Info.plist
+      MacOS/
+        AgentArmy       ← shell launcher
+      Resources/
+        icon.icns       ← app icon (generated)
+        AppIcon.png     ← source icon
+
+Usage:
+    python scripts/build_app.py               # build the .app
+    python scripts/build_app.py --install     # build + copy to /Applications
+"""
+
+import argparse
+import os
+import plistlib
+import shutil
+import stat
+import subprocess
+import sys
+import textwrap
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
+APP_NAME = "AgentArmy"
+APP_BUNDLE = os.path.join(DIST_DIR, f"{APP_NAME}.app")
+BUNDLE_ID = "dev.agentarmy.commandcenter"
+VERSION = "1.0.0"
+
+
+def create_icon(resources_dir: str) -> str:
+    """Generate a simple app icon (cyan shield on dark background).
+
+    Returns the path to the .icns file.
+    """
+    png_path = os.path.join(resources_dir, "AppIcon.png")
+    icns_path = os.path.join(resources_dir, "icon.icns")
+    iconset_dir = os.path.join(resources_dir, "icon.iconset")
+
+    # Create a 512x512 PNG icon using Python (no ImageMagick needed)
+    try:
+        # Try with Pillow first
+        from PIL import Image, ImageDraw, ImageFont
+
+        size = 512
+        img = Image.new("RGBA", (size, size), (15, 23, 42, 255))  # slate-950
+        draw = ImageDraw.Draw(img)
+
+        # Draw a rounded rectangle background
+        margin = 40
+        draw.rounded_rectangle(
+            [margin, margin, size - margin, size - margin],
+            radius=60,
+            fill=(6, 182, 212, 40),    # brand-500/15
+            outline=(6, 182, 212, 120), # brand-500/50
+            width=3,
+        )
+
+        # Draw a shield shape
+        cx, cy = size // 2, size // 2 - 10
+        shield_w, shield_h = 140, 170
+        points = [
+            (cx, cy - shield_h // 2),                     # top
+            (cx + shield_w // 2, cy - shield_h // 3),     # top-right
+            (cx + shield_w // 2, cy + shield_h // 6),     # mid-right
+            (cx, cy + shield_h // 2),                     # bottom
+            (cx - shield_w // 2, cy + shield_h // 6),     # mid-left
+            (cx - shield_w // 2, cy - shield_h // 3),     # top-left
+        ]
+        draw.polygon(points, fill=(6, 182, 212, 200), outline=(6, 182, 212, 255))
+
+        # Draw "AA" text
+        try:
+            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 72)
+        except Exception:
+            font = ImageFont.load_default()
+        draw.text((cx, cy + 5), "AA", fill=(15, 23, 42, 255), font=font, anchor="mm")
+
+        # Draw "AGENT ARMY" below
+        try:
+            small_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 32)
+        except Exception:
+            small_font = ImageFont.load_default()
+        draw.text(
+            (cx, size - margin - 40), "AGENT ARMY",
+            fill=(6, 182, 212, 200), font=small_font, anchor="mm",
+        )
+
+        img.save(png_path, "PNG")
+        print(f"  Icon PNG created: {png_path}")
+
+    except ImportError:
+        # Fallback: create a minimal 1x1 PNG (iconutil will still work)
+        print("  Pillow not installed — using placeholder icon")
+        # Minimal valid PNG (1x1 cyan pixel)
+        import struct
+        import zlib
+
+        def make_png(width, height, color):
+            """Create a minimal PNG."""
+
+            def chunk(chunk_type, data):
+                c = chunk_type + data
+                return struct.pack(">I", len(data)) + c + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
+
+            raw = b""
+            for _ in range(height):
+                raw += b"\x00"  # filter byte
+                for _ in range(width):
+                    raw += bytes(color)
+
+            return (
+                b"\x89PNG\r\n\x1a\n"
+                + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+                + chunk(b"IDAT", zlib.compress(raw))
+                + chunk(b"IEND", b"")
+            )
+
+        with open(png_path, "wb") as f:
+            f.write(make_png(512, 512, (6, 182, 212, 255)))
+
+    # Convert PNG → icns using macOS iconutil
+    os.makedirs(iconset_dir, exist_ok=True)
+    sizes = [16, 32, 64, 128, 256, 512]
+    for s in sizes:
+        # Use sips (macOS built-in) to resize
+        out = os.path.join(iconset_dir, f"icon_{s}x{s}.png")
+        subprocess.run(
+            ["sips", "-z", str(s), str(s), png_path, "--out", out],
+            capture_output=True,
+        )
+        # @2x variant
+        if s <= 256:
+            out2x = os.path.join(iconset_dir, f"icon_{s}x{s}@2x.png")
+            subprocess.run(
+                ["sips", "-z", str(s * 2), str(s * 2), png_path, "--out", out2x],
+                capture_output=True,
+            )
+
+    result = subprocess.run(
+        ["iconutil", "-c", "icns", iconset_dir, "-o", icns_path],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print(f"  Icon .icns created: {icns_path}")
+    else:
+        print(f"  Warning: iconutil failed ({result.stderr.strip()}), icon may be missing")
+
+    # Cleanup iconset
+    shutil.rmtree(iconset_dir, ignore_errors=True)
+
+    return icns_path
+
+
+def create_launcher(macos_dir: str) -> str:
+    """Create the shell script that launches the Python app."""
+    launcher_path = os.path.join(macos_dir, APP_NAME)
+
+    # Resolve paths relative to the .app bundle
+    # NOTE: we write a plain string (no f-string) so shell $(...) is not
+    # mangled by Python.  Only PROJECT_ROOT is injected via .replace().
+    script = textwrap.dedent("""\
+        #!/bin/bash
+        # AgentArmy — macOS app launcher
+
+        # Log file for debugging (visible via Console.app or tail)
+        LOG="$HOME/Library/Logs/AgentArmy.log"
+        exec >> "$LOG" 2>&1
+        echo ""
+        echo "=== AgentArmy launch $(date) ==="
+
+        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+        # Project root baked in at build time
+        PROJECT_ROOT="__PROJECT_ROOT__"
+
+        # Fallback: .app sits inside dist/ inside project
+        if [ ! -d "$PROJECT_ROOT/src" ]; then
+            PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+        fi
+        if [ ! -d "$PROJECT_ROOT/src" ]; then
+            PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+        fi
+
+        echo "PROJECT_ROOT=$PROJECT_ROOT"
+
+        VENV="$PROJECT_ROOT/.venv"
+        PYTHON="$VENV/bin/python"
+
+        if [ ! -f "$PYTHON" ]; then
+            echo "ERROR: venv not found at $VENV"
+            osascript -e "display dialog \\"AgentArmy virtual environment not found at:\\n$VENV\\n\\nRun:  make setup\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+            exit 1
+        fi
+
+        echo "PYTHON=$PYTHON"
+
+        # Check pywebview is installed
+        if ! "$PYTHON" -c "import webview" 2>/dev/null; then
+            echo "ERROR: pywebview not installed"
+            osascript -e "display dialog \\"pywebview is not installed.\\n\\nRun:  pip install pywebview\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+            exit 1
+        fi
+
+        # Load environment
+        if [ -f "$PROJECT_ROOT/.env" ]; then
+            set -a
+            source "$PROJECT_ROOT/.env"
+            set +a
+        fi
+
+        cd "$PROJECT_ROOT"
+        echo "Launching: $PYTHON -m src.desktop.app --standalone"
+        "$PYTHON" -m src.desktop.app --standalone
+
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo "ERROR: app exited with code $EXIT_CODE"
+            osascript -e "display dialog \\"AgentArmy crashed (exit code $EXIT_CODE).\\n\\nCheck log: $LOG\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+        fi
+    """).replace("__PROJECT_ROOT__", PROJECT_ROOT)
+
+    with open(launcher_path, "w") as f:
+        f.write(script)
+
+    # Make executable
+    st = os.stat(launcher_path)
+    os.chmod(launcher_path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+
+    print(f"  Launcher created: {launcher_path}")
+    return launcher_path
+
+
+def create_info_plist(contents_dir: str, icon_name: str) -> str:
+    """Create the Info.plist."""
+    plist_path = os.path.join(contents_dir, "Info.plist")
+
+    info = {
+        "CFBundleDisplayName": "AgentArmy",
+        "CFBundleName": APP_NAME,
+        "CFBundleIdentifier": BUNDLE_ID,
+        "CFBundleVersion": VERSION,
+        "CFBundleShortVersionString": VERSION,
+        "CFBundlePackageType": "APPL",
+        "CFBundleSignature": "????",
+        "CFBundleExecutable": APP_NAME,
+        "CFBundleIconFile": icon_name,
+        "LSMinimumSystemVersion": "12.0",
+        "NSHighResolutionCapable": True,
+        "NSSupportsAutomaticGraphicsSwitching": True,
+        "LSApplicationCategoryType": "public.app-category.developer-tools",
+        "NSAppTransportSecurity": {
+            "NSAllowsLocalNetworking": True,
+        },
+    }
+
+    with open(plist_path, "wb") as f:
+        plistlib.dump(info, f)
+
+    print(f"  Info.plist created: {plist_path}")
+    return plist_path
+
+
+def build_app() -> str:
+    """Build the complete .app bundle."""
+    print(f"\nBuilding {APP_NAME}.app ...\n")
+
+    # Clean previous build
+    if os.path.exists(APP_BUNDLE):
+        shutil.rmtree(APP_BUNDLE)
+
+    # Create directory structure
+    contents_dir = os.path.join(APP_BUNDLE, "Contents")
+    macos_dir = os.path.join(contents_dir, "MacOS")
+    resources_dir = os.path.join(contents_dir, "Resources")
+
+    os.makedirs(macos_dir)
+    os.makedirs(resources_dir)
+
+    # Create components
+    icns_path = create_icon(resources_dir)
+    icon_name = os.path.basename(icns_path) if os.path.exists(icns_path) else "icon.icns"
+    create_info_plist(contents_dir, icon_name)
+    create_launcher(macos_dir)
+
+    # Remove macOS quarantine flag so Gatekeeper doesn't block it
+    subprocess.run(["xattr", "-cr", APP_BUNDLE], capture_output=True)
+    print(f"  Quarantine flag removed (xattr -cr)")
+
+    print(f"\n  {APP_NAME}.app built at: {APP_BUNDLE}")
+    return APP_BUNDLE
+
+
+def install_app(app_path: str) -> None:
+    """Copy .app to /Applications."""
+    dest = f"/Applications/{APP_NAME}.app"
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
+    shutil.copytree(app_path, dest)
+    print(f"  Installed to: {dest}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=f"Build {APP_NAME}.app")
+    parser.add_argument("--install", action="store_true", help="Copy to /Applications")
+    args = parser.parse_args()
+
+    app_path = build_app()
+
+    if args.install:
+        install_app(app_path)
+
+    print(f"\nDone! Open with:")
+    print(f"  open {app_path}")
+    print()
+
+
+if __name__ == "__main__":
+    main()

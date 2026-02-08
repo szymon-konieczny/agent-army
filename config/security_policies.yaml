@@ -1,0 +1,408 @@
+# AgentArmy Security Policies
+# Defines security rules, rate limits, and escalation procedures
+
+security_policies:
+  version: "1.0.0"
+  last_updated: "2024-01-01"
+
+# Token usage limits per agent per day
+token_usage_limits:
+  global:
+    max_tokens_per_day: 3000000
+    max_tokens_per_hour: 150000
+    hard_limit_action: "reject_request"
+
+  by_agent:
+    commander:
+      max_tokens_per_day: 1000000
+      max_tokens_per_hour: 50000
+      max_tokens_per_request: 8000
+
+    sentinel:
+      max_tokens_per_day: 500000
+      max_tokens_per_hour: 25000
+      max_tokens_per_request: 4000
+
+    builder:
+      max_tokens_per_day: 800000
+      max_tokens_per_hour: 40000
+      max_tokens_per_request: 8000
+
+    inspector:
+      max_tokens_per_day: 600000
+      max_tokens_per_hour: 30000
+      max_tokens_per_request: 6000
+
+    watcher:
+      max_tokens_per_day: 400000
+      max_tokens_per_hour: 20000
+      max_tokens_per_request: 4000
+
+# Rate limits per action type
+rate_limits:
+  git_operations:
+    push:
+      requests_per_minute: 10
+      requests_per_hour: 100
+      burst_allowance: 5
+
+    create_branch:
+      requests_per_minute: 5
+      requests_per_hour: 50
+
+    delete_branch:
+      requests_per_minute: 2
+      requests_per_hour: 20
+
+    merge:
+      requests_per_minute: 5
+      requests_per_hour: 50
+
+  deployment_operations:
+    deploy:
+      requests_per_hour: 10
+      requests_per_day: 50
+
+    rollback:
+      requests_per_hour: 20
+      requests_per_day: 100
+
+  build_operations:
+    start_build:
+      requests_per_minute: 10
+      requests_per_hour: 100
+      concurrent_limit: 3
+
+    start_test:
+      requests_per_minute: 20
+      requests_per_hour: 200
+      concurrent_limit: 5
+
+  whatsapp_messaging:
+    send_message:
+      requests_per_minute: 10
+      requests_per_hour: 100
+      per_day: 1000
+
+  api_calls:
+    llm_requests:
+      requests_per_minute: 100
+      requests_per_hour: 1000
+
+    database_queries:
+      requests_per_minute: 500
+      requests_per_hour: 5000
+
+# Forbidden actions list
+forbidden_actions:
+  critical:
+    - "delete_database"
+    - "truncate_table"
+    - "drop_schema"
+    - "drop_user"
+    - "modify_system_security_policy"
+    - "disable_audit_logging"
+    - "delete_audit_logs"
+
+  high:
+    - "force_push_main"
+    - "force_push_production"
+    - "delete_main_branch"
+    - "delete_production_branch"
+    - "disable_firewall"
+    - "modify_firewall_rules"
+    - "export_sensitive_data"
+    - "disable_encryption"
+
+  medium:
+    - "modify_another_agents_config"
+    - "access_other_agents_private_keys"
+    - "read_environment_variables"
+    - "modify_ci_cd_pipeline_without_approval"
+    - "scale_down_critical_services"
+
+# Escalation rules - what triggers human approval
+escalation_rules:
+  actions_requiring_approval:
+    - action: "deploy_to_production"
+      required_approvals: 2
+      timeout_hours: 1
+      priority: "critical"
+      notifiers:
+        - "whatsapp"
+        - "email"
+        - "slack"
+
+    - action: "delete_artifact"
+      required_approvals: 1
+      timeout_hours: 2
+      priority: "high"
+      notifiers:
+        - "email"
+        - "slack"
+
+    - action: "modify_ci_cd_pipeline"
+      required_approvals: 1
+      timeout_hours: 2
+      priority: "high"
+      notifiers:
+        - "email"
+        - "slack"
+
+    - action: "force_push"
+      required_approvals: 1
+      timeout_hours: 1
+      priority: "high"
+      notifiers:
+        - "slack"
+
+    - action: "delete_branch"
+      required_approvals: 1
+      timeout_hours: 2
+      priority: "medium"
+      notifiers:
+        - "slack"
+
+    - action: "scale_down_services"
+      required_approvals: 1
+      timeout_hours: 2
+      priority: "high"
+      notifiers:
+        - "slack"
+
+  automatic_escalation:
+    - trigger: "multiple_failed_deployments"
+      count: 3
+      window_minutes: 60
+      action: "pause_deployments"
+      notifiers:
+        - "whatsapp"
+        - "email"
+
+    - trigger: "security_anomaly_detected"
+      action: "trigger_security_scan"
+      escalate_to: "sentinel,commander"
+
+    - trigger: "resource_threshold_exceeded"
+      cpu_percent: 90
+      memory_percent: 85
+      action: "notify_team"
+      notifiers:
+        - "slack"
+        - "email"
+
+    - trigger: "repeated_rate_limit_violations"
+      count: 5
+      window_minutes: 60
+      action: "throttle_agent"
+      notifiers:
+        - "slack"
+
+# Network access control rules
+network_access_control:
+  default_policy: "deny"
+
+  by_agent:
+    commander:
+      allowed_hosts:
+        - "*"
+      allowed_ports:
+        - 80
+        - 443
+        - 5672  # RabbitMQ
+        - 6379  # Redis
+        - 5432  # PostgreSQL
+
+    sentinel:
+      allowed_hosts:
+        - "localhost"
+        - "*.internal"
+      allowed_ports:
+        - 5672
+        - 6379
+        - 5432
+
+    builder:
+      allowed_hosts:
+        - "github.com"
+        - "api.github.com"
+        - "pypi.org"
+        - "files.pythonhosted.org"
+        - "npmjs.org"
+        - "registry.npmjs.org"
+        - "docker.io"
+        - "localhost"
+        - "*.internal"
+      allowed_ports:
+        - 80
+        - 443
+        - 5672
+        - 6379
+        - 5432
+
+    inspector:
+      allowed_hosts:
+        - "localhost"
+        - "*.internal"
+        - "pypi.org"
+        - "files.pythonhosted.org"
+      allowed_ports:
+        - 5672
+        - 6379
+        - 5432
+
+    watcher:
+      allowed_hosts:
+        - "localhost"
+        - "*.internal"
+      allowed_ports:
+        - 5672
+        - 6379
+        - 5432
+
+# Filesystem access control
+filesystem_access_control:
+  default_policy: "deny"
+
+  by_agent:
+    commander:
+      allowed_paths:
+        - "/app"
+        - "/var/log"
+        - "/var/lib/postgresql"
+        - "/var/lib/rabbitmq"
+
+    sentinel:
+      allowed_paths:
+        - "/app"
+        - "/var/log"
+        - "/var/lib/postgresql"
+      forbidden_paths:
+        - "/root"
+        - "/etc/shadow"
+        - "/etc/gshadow"
+
+    builder:
+      allowed_paths:
+        - "/app/src"
+        - "/app/tests"
+        - "/app/build"
+        - "/app/artifacts"
+        - "/home/agentuser/.cache"
+      forbidden_paths:
+        - "/root"
+        - "/etc"
+        - "/var/lib/postgresql"
+        - "/var/lib/rabbitmq"
+
+    inspector:
+      allowed_paths:
+        - "/app/src"
+        - "/app/tests"
+        - "/home/agentuser/.cache"
+
+    watcher:
+      allowed_paths:
+        - "/app"
+        - "/var/log"
+        - "/var/lib/postgresql"
+
+# Database access control
+database_access_control:
+  default_policy: "deny"
+
+  by_agent:
+    commander:
+      access_level: "full"
+      allowed_schemas:
+        - "*"
+      allowed_operations:
+        - "select"
+        - "insert"
+        - "update"
+        - "delete"
+        - "create"
+        - "alter"
+        - "drop"
+
+    sentinel:
+      access_level: "read-only"
+      allowed_schemas:
+        - "*"
+      allowed_operations:
+        - "select"
+
+    builder:
+      access_level: "read-write"
+      allowed_schemas:
+        - "public"
+        - "deployments"
+      allowed_operations:
+        - "select"
+        - "insert"
+        - "update"
+      forbidden_operations:
+        - "delete"
+        - "drop"
+        - "alter"
+
+    inspector:
+      access_level: "read-only"
+      allowed_schemas:
+        - "public"
+      allowed_operations:
+        - "select"
+
+    watcher:
+      access_level: "read-only"
+      allowed_schemas:
+        - "*"
+      allowed_operations:
+        - "select"
+
+# Audit logging configuration
+audit_logging:
+  enabled: true
+  log_level: "INFO"
+  log_all_actions: true
+  sensitive_field_redaction: true
+
+  fields_to_redact:
+    - "api_key"
+    - "secret"
+    - "password"
+    - "token"
+    - "private_key"
+    - "github_token"
+    - "docker_credentials"
+    - "whatsapp_token"
+
+  retention_policy:
+    critical_actions: "1 year"
+    high_actions: "6 months"
+    medium_actions: "3 months"
+    low_actions: "1 month"
+
+# Encryption configuration
+encryption:
+  enabled: true
+  algorithm: "AES-256-GCM"
+  key_rotation_interval_days: 90
+
+  encrypted_fields:
+    - "api_key"
+    - "secret"
+    - "password"
+    - "token"
+    - "private_key"
+    - "docker_credentials"
+    - "whatsapp_token"
+
+# Compliance configuration
+compliance:
+  enabled: true
+  frameworks:
+    - "SOC2"
+    - "GDPR"
+  audit_trail_enabled: true
+  data_retention_days: 365

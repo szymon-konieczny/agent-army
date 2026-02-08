@@ -1,0 +1,357 @@
+# Autonomy Policies for AgentArmy
+# Controls what agents can do without human approval
+#
+# TIER DEFINITIONS:
+#   GREEN:  Fully autonomous — agent executes immediately, action logged
+#   YELLOW: Autonomous + notify — agent executes, human gets digest
+#   RED:    Requires approval — agent pauses, sends WhatsApp request
+#   BLACK:  Forbidden — never executed, even with approval
+#
+# Customize these policies to match your team's risk tolerance and practices.
+# More actions in GREEN = faster execution but less oversight
+# More actions in RED = slower execution but maximum safety
+
+version: "1.0"
+
+# Autonomy tier definitions and action patterns
+tiers:
+  green:
+    description: "Fully autonomous operations — execute immediately"
+    actions:
+      # Code reading and analysis
+      - "git.read*"
+      - "git.list*"
+      - "code.read"
+      - "code.analyze"
+      - "code.review"
+      - "code.lint"
+      - "docs.read"
+
+      # Testing
+      - "test.run*"
+      - "test.generate*"
+      - "test.lint"
+      - "test.coverage"
+
+      # Code writing (non-critical files)
+      - "code.write"
+      - "code.refactor"
+      - "docs.generate"
+      - "docs.write"
+
+      # Branch operations
+      - "git.create_branch"
+      - "git.delete_branch"  # except main/master
+
+      # Learning and analysis
+      - "research.*"
+      - "analyze.*"
+      - "monitor.*"
+      - "scan.code_quality"
+      - "scan.dependencies"
+
+  yellow:
+    description: "Autonomous + digest notification"
+    actions:
+      # Pull request operations
+      - "git.create_pull_request"
+      - "git.comment_on_pr"
+
+      # Merging (non-main)
+      - "git.merge"  # except main/master
+
+      # Dependency updates (minor/patch)
+      - "dependency.update"  # except major
+
+      # Configuration changes
+      - "config.update"
+      - "env.update"  # except secrets
+
+      # Staging deployments
+      - "deploy.staging"
+      - "deploy.preview"
+
+      # Security operations (informational)
+      - "scan.security"
+      - "scan.secrets"
+      - "audit.review"
+
+      # Notifications
+      - "notify.*"
+      - "alert.*"
+
+      # Database operations (non-destructive)
+      - "db.migrate"  # except rollback
+      - "db.backup"
+
+  red:
+    description: "Requires human approval via WhatsApp"
+    actions:
+      # Production deployments
+      - "deploy.production"
+      - "deploy.canary"
+      - "deploy.release"
+
+      # Mainline branch operations
+      - "git.merge"  # main/master only
+      - "git.force_push"
+      - "git.rewrite_history"
+      - "git.delete_branch"  # main/master
+
+      # Major dependency upgrades
+      - "dependency.upgrade_major"
+      - "dependency.add_major"
+
+      # Secrets and configuration
+      - "secrets.rotate"
+      - "secrets.create"
+      - "config.critical_update"
+      - "env.set_secret"
+
+      # Infrastructure changes
+      - "infrastructure.modify"
+      - "infrastructure.scale"
+      - "cluster.upgrade"
+
+      # Database operations
+      - "db.rollback"
+      - "db.delete_data"
+      - "db.migrate_destructive"
+
+      # High-cost operations
+      - "ml.train_model"  # Depends on cost
+      - "llm.batch_processing"  # Depends on cost
+
+  black:
+    description: "Absolutely forbidden — never executed"
+    actions:
+      # Secrets exposure
+      - "secrets.expose"
+      - "secrets.log_secrets"
+      - "secrets.send_unencrypted"
+
+      # Data exfiltration
+      - "data.exfiltrate"
+      - "data.export_customer_data"
+      - "data.access_without_permission"
+
+      # Audit trail manipulation
+      - "audit.delete"
+      - "audit.modify"
+      - "audit.clear_logs"
+
+      # Dangerous git operations
+      - "git.rewrite_history"  # main only
+      - "git.force_push"  # main only
+
+      # System-level destruction
+      - "system.shutdown"  # without commander approval
+      - "system.format_disk"
+      - "db.drop_production"
+
+# Trust system configuration
+trust:
+  # Starting score for new agents
+  initial_score: 50
+
+  # Maximum possible score
+  max_score: 100
+
+  # Thresholds for trust levels
+  probation_threshold: 30      # Below this = PROBATION level
+  standard_threshold: 30       # 30-60 = STANDARD
+  trusted_threshold: 60        # 60-85 = TRUSTED (can elevate YELLOW→GREEN)
+  autonomous_threshold: 85     # 85+ = AUTONOMOUS
+
+  # Automatic freeze after N consecutive failures
+  freeze_on_consecutive_failures: 3
+
+  # Score decay configuration
+  decay_enabled: true
+  decay_per_day_inactive: 0.1  # 0.1 points per day with no activity
+  minimum_score_after_decay: 50  # Never decay below initial score
+
+# Guardrail configuration (automated safety checks)
+guardrails:
+  # Cost limits for LLM operations
+  cost_warning_threshold: 1.0      # Warn if >$1
+  cost_error_threshold: 10.0       # Error if >$10
+  cost_critical_threshold: 50.0    # Critical if >$50
+
+  # Diff size limits
+  max_diff_lines_warn: 500         # Warn if >500 lines changed
+  max_diff_lines_error: 2000       # Error if >2000 lines changed
+  max_files_per_action: 10         # Error if >10 files modified
+
+  # Rate limiting
+  rate_limit_per_agent_per_minute: 30    # Max N actions per agent per minute
+  rate_limit_global_per_minute: 100      # Max N actions globally per minute
+
+  # Protected paths (cannot be written to without approval)
+  protected_paths:
+    - ".env"
+    - ".env.*"
+    - "secrets/*"
+    - "*.pem"
+    - "*.key"
+    - "**/credentials.*"
+    - ".aws/*"
+    - ".ssh/*"
+    - "docker-compose.prod.yaml"
+    - "kubernetes/production/*"
+
+  # Protected branches (cannot force-push or rewrite history)
+  protected_branches:
+    - "main"
+    - "master"
+    - "production"
+    - "staging"
+
+  # Secret detection patterns (in addition to built-in patterns)
+  secret_patterns:
+    - "api_key"
+    - "aws_key"
+    - "private_key"
+    - "password"
+    - "token"
+    - "github_token"
+    - "slack_token"
+    - "stripe_key"
+    - "auth0_secret"
+
+# Digest notification configuration
+digest:
+  # Delivery mode: none / digest / daily / realtime
+  mode: "digest"
+
+  # How often to send digest (minutes)
+  interval_minutes: 30
+
+  # Quiet hours (24-hour format, UTC)
+  # No digest notifications sent between these hours
+  # Example: [23, 7] means 11pm-7am (no notifications)
+  # Set to null to disable quiet hours
+  quiet_hours: null
+
+  # Action patterns that always send immediate notification
+  # (overrides digest batching)
+  always_immediate:
+    - "deploy.production"
+    - "deploy.release"
+    - "secrets.rotate"
+    - "infrastructure.modify"
+    - "security.*critical*"
+
+  # Include cost summary in digest
+  include_cost_summary: true
+
+  # Include trust score changes in digest
+  include_trust_changes: true
+
+# Policy conditions
+# These can override default tiers based on context
+conditions:
+  # Environment-based escalation
+  - name: "production_environment"
+    field: "environment"
+    operator: "eq"
+    value: "production"
+    apply_to: ["git.merge", "git.force_push", "deploy.staging"]
+    override_tier: "red"
+
+  # Cost-based escalation
+  - name: "high_cost_operation"
+    field: "estimated_cost"
+    operator: "gt"
+    value: 10.0
+    apply_to: ["deploy.*", "ml.*", "llm.*"]
+    override_tier: "red"
+
+  # Time-window enforcement
+  - name: "deployment_window"
+    field: "current_hour"
+    operator: "lt"
+    value: 9
+    apply_to: ["deploy.production", "deploy.release"]
+    override_tier: "red"
+
+# Trust-based escalation
+# Agents with high trust can operate with more autonomy
+trust_escalation:
+  # TRUSTED agents (60+) can elevate YELLOW→GREEN
+  yellow_to_green:
+    required_trust_level: "trusted"
+    max_trust_score: 85  # Once AUTONOMOUS, always GREEN
+    allowed_actions:
+      - "git.create_pull_request"
+      - "git.merge"  # non-main
+      - "deploy.staging"
+
+  # AUTONOMOUS agents (85+) can auto-approve some RED actions
+  red_to_yellow:
+    required_trust_level: "autonomous"
+    max_trust_score: 100
+    allowed_actions:
+      - "dependency.upgrade_major"
+      - "deploy.canary"
+
+# Workflow configuration
+workflows:
+  # Default behavior for workflows
+  timeout_per_step_seconds: 300  # 5 minutes per step
+  timeout_total_seconds: 3600    # 1 hour total
+
+  # Templates built-in
+  builtin_templates:
+    - "feature_development"
+    - "security_scan"
+    - "bug_fix"
+    - "deploy_staging"
+    - "deploy_production"
+
+# Approval flow configuration
+approval:
+  # WhatsApp notification settings
+  whatsapp_enabled: true
+  whatsapp_timeout_seconds: 300  # 5-minute timeout for approval
+
+  # Escalation: if no approval after timeout, what happens?
+  timeout_action: "abort"  # abort / retry_later
+
+  # Can agents auto-approve their own actions (AUTONOMOUS only)?
+  allow_self_approval_for_autonomous: false
+
+  # Required approvers for different action classes
+  required_approvers:
+    deploy.production: 1         # Need 1 approval
+    infrastructure.modify: 2     # Need 2 approvals
+    secrets.rotate: 1            # Need 1 approval
+
+# Logging and audit
+audit:
+  # Log all policy decisions
+  log_all_decisions: true
+
+  # Log all guardrail checks
+  log_all_guardrails: true
+
+  # Log trust score changes
+  log_trust_changes: true
+
+  # Store detailed audit trail
+  store_audit_trail: true
+  audit_retention_days: 90
+
+# Integration points
+integrations:
+  # Slack channel for notifications
+  slack_channel: "#agent-army"
+  slack_enabled: false
+
+  # Email fallback (if WhatsApp fails)
+  email_enabled: false
+  email_address: "ops@company.com"
+
+  # Datadog/monitoring integration
+  metrics_enabled: true
+  metrics_prefix: "agentarmy"

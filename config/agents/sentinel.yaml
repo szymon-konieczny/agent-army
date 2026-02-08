@@ -1,0 +1,236 @@
+# Sentinel Agent Configuration
+# Role: Security monitoring and threat detection
+
+agent:
+  id: "sentinel"
+  name: "Sentinel"
+  version: "1.0.0"
+  description: "Security monitoring and threat detection system"
+  enabled: true
+
+# Capabilities and permissions
+capabilities:
+  # Read-only access to all repositories
+  repository_access:
+    enabled: true
+    access_level: "read-only"
+    actions:
+      - "read_repository"
+      - "scan_code"
+      - "analyze_dependencies"
+      - "check_secrets"
+      - "list_commits"
+      - "get_file_content"
+    forbidden_actions:
+      - "write_repository"
+      - "delete_branch"
+      - "force_push"
+      - "merge_code"
+
+  # Read-only access to all systems
+  system_access:
+    enabled: true
+    access_level: "read-only"
+    actions:
+      - "read_system_logs"
+      - "get_system_metrics"
+      - "list_running_processes"
+      - "get_network_interfaces"
+      - "get_disk_usage"
+      - "get_memory_usage"
+    paths:
+      - "/var/log"
+      - "/proc"
+      - "/sys"
+      - "/etc/hostname"
+    forbidden_paths:
+      - "/root"
+      - "/etc/shadow"
+      - "/etc/passwd"
+
+  # Write access to security logs only
+  security_logging:
+    enabled: true
+    actions:
+      - "write_security_logs"
+      - "write_audit_logs"
+      - "create_incident_report"
+    paths:
+      - "/var/log/security"
+      - "/var/log/audit"
+    max_file_size: "100Mi"
+    rotation_policy: "daily"
+
+  # Filesystem scanning
+  filesystem_scan:
+    enabled: true
+    actions:
+      - "scan_filesystem"
+      - "scan_directories"
+      - "check_file_permissions"
+      - "detect_anomalies"
+      - "calculate_checksums"
+    excluded_paths:
+      - "/proc"
+      - "/sys"
+      - "/dev"
+      - "/tmp"
+    max_scan_depth: 10
+
+  # Network monitoring
+  network_monitoring:
+    enabled: true
+    actions:
+      - "monitor_network_traffic"
+      - "list_open_ports"
+      - "analyze_network_connections"
+      - "detect_suspicious_ips"
+      - "check_firewall_rules"
+    monitored_interfaces:
+      - "eth0"
+
+  # Alert triggering
+  alert_triggering:
+    enabled: true
+    actions:
+      - "create_alert"
+      - "escalate_alert"
+      - "acknowledge_alert"
+      - "close_alert"
+    alert_types:
+      - "security_incident"
+      - "anomalous_behavior"
+      - "policy_violation"
+      - "unauthorized_access"
+    escalation_thresholds:
+      critical: 0
+      high: 2
+      medium: 5
+      low: 10
+
+  # LLM access for threat analysis
+  llm_access:
+    enabled: true
+    models:
+      - "claude-3-5-sonnet"
+      - "claude-opus-4-6"
+    max_tokens_per_request: 4000
+    max_tokens_per_day: 500000
+    actions:
+      - "analyze_threat"
+      - "generate_security_report"
+      - "suggest_mitigations"
+
+  # Notification capabilities
+  notifications:
+    enabled: true
+    channels:
+      - type: "whatsapp"
+        filter: "critical,high"
+      - type: "email"
+        filter: "critical,high,medium"
+      - type: "webhook"
+        filter: "all"
+      - type: "slack"
+        filter: "all"
+
+# Resource limits
+resource_limits:
+  cpu:
+    request: "0.75"
+    limit: "1.5"
+  memory:
+    request: "750M"
+    limit: "1.5Gi"
+  storage:
+    request: "20Gi"
+    limit: "100Gi"
+
+# Token usage limits
+token_limits:
+  max_tokens_per_day: 500000
+  max_tokens_per_hour: 25000
+  max_tokens_per_request: 4000
+  rate_limit_window: 3600
+
+# Approval requirements
+requires_approval_for:
+  # None - Sentinel has read-only access and can trigger alerts
+
+# Audit and logging
+audit:
+  enabled: true
+  log_level: "DEBUG"
+  log_all_scans: true
+  sensitive_fields_redacted: true
+  fields_to_redact:
+    - "api_key"
+    - "token"
+    - "secret"
+    - "password"
+    - "private_key"
+
+# Dependencies
+depends_on:
+  - "redis"
+  - "rabbitmq"
+  - "postgres"
+
+# Healthcheck configuration
+healthcheck:
+  enabled: true
+  endpoint: "http://localhost:9000/health"
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Startup configuration
+startup:
+  startup_timeout: 30s
+  healthcheck_delay: 5s
+  priority: 2  # Start early for security
+
+# Scheduling
+scheduling:
+  enabled: true
+  jobs:
+    - name: "filesystem_scan"
+      schedule: "0 */4 * * *"  # Every 4 hours
+      action: "scan_filesystem"
+
+    - name: "network_monitoring"
+      schedule: "*/5 * * * *"  # Every 5 minutes
+      action: "monitor_network"
+
+    - name: "dependency_check"
+      schedule: "0 2 * * 0"  # Weekly at 2 AM Sunday
+      action: "check_dependencies"
+
+    - name: "security_report"
+      schedule: "0 8 * * *"  # Daily at 8 AM
+      action: "generate_security_report"
+
+# Security scanning profiles
+scanning:
+  profiles:
+    - name: "quick"
+      duration_max: "5m"
+      depth: "shallow"
+
+    - name: "standard"
+      duration_max: "30m"
+      depth: "normal"
+
+    - name: "thorough"
+      duration_max: "2h"
+      depth: "deep"
+
+  default_profile: "standard"
+
+# Threat detection configuration
+threat_detection:
+  enabled: true
+  signatures_file: "config/security/signatures.json"
+  update_interval: "24h"
+  auto_remediate: false
+  quarantine_suspicious_files: true

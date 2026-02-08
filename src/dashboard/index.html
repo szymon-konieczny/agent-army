@@ -1,0 +1,3878 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentArmy — Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#ecfeff',100:'#cffafe',200:'#a5f3fc',300:'#67e8f9',400:'#22d3ee',500:'#06b6d4',600:'#0891b2',700:'#0e7490',800:'#155e75',900:'#164e63' },
+          },
+          fontFamily: { mono: ['"JetBrains Mono"','ui-monospace','monospace'] },
+          animation: { 'pulse-slow':'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite' },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #475569; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .fade-in { animation: fadeIn .3s ease-out; }
+    @keyframes glow { 0%,100% { box-shadow:0 0 8px rgba(6,182,212,.3); } 50% { box-shadow:0 0 20px rgba(6,182,212,.5); } }
+    .glow-pulse { animation: glow 2s ease-in-out infinite; }
+    .agent-card { transition: all .2s ease; }
+    .agent-card:hover { transform: translateY(-2px); }
+
+    /* Message overflow fix */
+    .chat-bubble { overflow-wrap: break-word; word-break: break-word; min-width: 0; }
+    .chat-bubble pre { max-width: 100%; }
+
+    /* Markdown rendered content */
+    .md-content h1, .md-content h2, .md-content h3, .md-content h4 {
+      font-weight: 600; margin-top: 0.75em; margin-bottom: 0.35em; line-height: 1.3;
+    }
+    .md-content h1 { font-size: 1.15em; color: #e2e8f0; }
+    .md-content h2 { font-size: 1.05em; color: #e2e8f0; }
+    .md-content h3 { font-size: 0.95em; color: #cbd5e1; }
+    .md-content h4 { font-size: 0.88em; color: #94a3b8; }
+    .md-content p { margin: 0.4em 0; }
+    .md-content ul, .md-content ol { margin: 0.4em 0; padding-left: 1.4em; }
+    .md-content li { margin: 0.15em 0; }
+    .md-content ul li { list-style-type: disc; }
+    .md-content ol li { list-style-type: decimal; }
+    .md-content a { color: #22d3ee; text-decoration: underline; }
+    .md-content strong { color: #f1f5f9; font-weight: 600; }
+    .md-content em { font-style: italic; color: #cbd5e1; }
+    .md-content blockquote {
+      border-left: 3px solid #334155; padding-left: 0.75em; margin: 0.5em 0;
+      color: #94a3b8; font-style: italic;
+    }
+    .md-content hr { border: none; border-top: 1px solid #334155; margin: 0.75em 0; }
+    .md-content code:not(pre code) {
+      background: rgba(30,41,59,0.8); border: 1px solid #334155; border-radius: 4px;
+      padding: 0.1em 0.35em; font-size: 0.88em; font-family: 'JetBrains Mono', monospace;
+      color: #67e8f9;
+    }
+    .md-content pre { margin: 0; }
+    .md-content table { border-collapse: collapse; width: 100%; margin: 0.5em 0; font-size: 0.88em; }
+    .md-content th { background: rgba(30,41,59,0.6); padding: 0.4em 0.6em; text-align: left; border: 1px solid #334155; font-weight: 600; }
+    .md-content td { padding: 0.35em 0.6em; border: 1px solid #1e293b; }
+    .md-content img { max-width: 100%; border-radius: 8px; margin: 0.5em 0; border: 1px solid #1e293b; cursor: pointer; transition: transform 0.2s; }
+    .md-content img:hover { transform: scale(1.02); }
+    .generated-image-card { background: rgba(15,23,42,0.6); border: 1px solid #334155; border-radius: 10px; padding: 8px; margin: 0.5em 0; }
+    .generated-image-card img { max-width: 100%; border-radius: 6px; display: block; }
+    .generated-image-card .prompt-text { font-size: 10px; color: #64748b; margin-top: 6px; font-style: italic; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ================================================================
+   API Client
+   ================================================================ */
+const API = window.location.origin;
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`HTTP ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+/* ================================================================
+   Icons (inline SVG — no dependency needed)
+   ================================================================ */
+const Icon = ({ name, size = 18, className = '' }) => {
+  const icons = {
+    shield:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    hammer:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91"/></svg>,
+    search:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+    eye:       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+    compass:   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>,
+    filetext:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
+    server:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>,
+    send:      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
+    activity:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+    check:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 6 9 17l-5-5"/></svg>,
+    x:         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+    clock:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    zap:       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+    terminal:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,
+    alert:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>,
+    radio:     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>,
+    megaphone:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>,
+    chevronUp:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m18 15-6-6-6 6"/></svg>,
+    chevronDown:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>,
+    folder:       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>,
+    gitBranch:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>,
+    brain:        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>,
+    plus:         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+    'refresh-cw': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>,
+    'edit-2':     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
+    mic:          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>,
+    image:        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+    'check-circle': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+const AGENT_META = {
+  sentinel:  { icon: 'shield',   color: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/30',     label: 'Security' },
+  builder:   { icon: 'hammer',   color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', label: 'Development' },
+  inspector: { icon: 'search',   color: 'text-amber-400',   bg: 'bg-amber-500/10',   border: 'border-amber-500/30',   label: 'Quality' },
+  watcher:   { icon: 'eye',      color: 'text-cyan-400',    bg: 'bg-cyan-500/10',    border: 'border-cyan-500/30',    label: 'Monitoring' },
+  scout:     { icon: 'compass',  color: 'text-violet-400',  bg: 'bg-violet-500/10',  border: 'border-violet-500/30',  label: 'Research' },
+  scribe:    { icon: 'filetext', color: 'text-blue-400',    bg: 'bg-blue-500/10',    border: 'border-blue-500/30',    label: 'Documentation' },
+  devops:    { icon: 'server',   color: 'text-slate-300',   bg: 'bg-slate-500/10',   border: 'border-slate-500/30',   label: 'Infrastructure' },
+  marketer:  { icon: 'megaphone',color: 'text-pink-400',    bg: 'bg-pink-500/10',    border: 'border-pink-500/30',    label: 'Marketing' },
+  designer:  { icon: 'image',    color: 'text-rose-400',    bg: 'bg-rose-500/10',    border: 'border-rose-500/30',    label: 'Design' },
+  linter:    { icon: 'check-circle', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', label: 'Linting' },
+  automator: { icon: 'zap',    color: 'text-yellow-400',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/30',  label: 'Automation' },
+  scheduler: { icon: 'clock',  color: 'text-teal-400',    bg: 'bg-teal-500/10',    border: 'border-teal-500/30',    label: 'Calendar' },
+};
+
+const AGENT_NAMES = {
+  sentinel: 'Sentinel',  builder: 'Builder',   inspector: 'Inspector',
+  watcher: 'Watcher',    scout: 'Scout',       scribe: 'Scribe',
+  devops: 'DevOps',      marketer: 'Marketer',   designer: 'Designer',   linter: 'Linter',   automator: 'Automator',   scheduler: 'Scheduler',
+};
+
+const AGENT_DOT_COLORS = {
+  sentinel: 'bg-red-400',     builder: 'bg-emerald-400', inspector: 'bg-amber-400',
+  watcher: 'bg-cyan-400',     scout: 'bg-violet-400',    scribe: 'bg-blue-400',
+  devops: 'bg-slate-300',     marketer: 'bg-pink-400',   designer: 'bg-rose-400',   linter: 'bg-orange-400',   automator: 'bg-yellow-400',   scheduler: 'bg-teal-400',
+};
+
+// Lightweight client-side routing — mirrors server-side _route_chat_to_agent
+function predictAgent(message) {
+  const msg = message.toLowerCase();
+  const routing = {
+    sentinel: ['security','vulnerability','scan','threat','attack','cve','exploit','firewall','malware','audit'],
+    builder:  ['code','build','develop','implement','create app','program','software','function','class','api','feature','module','refactor','debug','html','css','page'],
+    inspector:['test','quality','qa','bug','inspect','coverage','unit test','regression'],
+    watcher:  ['monitor','health','status','uptime','alert','metric','performance','cpu','memory'],
+    scout:    ['research','analyze','compare','evaluate','study','investigate','technology','trend','report'],
+    scribe:   ['document','write doc','readme','api doc','documentation','changelog','spec','wiki'],
+    devops:   ['deploy','infrastructure','ci/cd','pipeline','docker','kubernetes','server','terraform','cloud'],
+    marketer: ['marketing','linkedin','post','social media','content','campaign','brand','seo','newsletter'],
+    designer: ['design image','generate image','social image','banner','thumbnail','cover image','profile picture','og image','instagram image','youtube thumbnail','twitter header','visual design','image for'],
+    linter:   ['lint','eslint','prettier','ruff','pylint','mypy','stylelint','format code','code style','static analysis','auto-fix','autofix','linting','type check','clippy','shellcheck','hadolint','golangci'],
+    automator:['automate','automation','shortcut','shortcuts','applescript','osascript','fill form','scrape','browser automate','rpa','repetitive','clipboard','desktop','run shortcut','macro'],
+    scheduler:['calendar','schedule','meeting','event','agenda','free time','availability','timesheet','tempo','google calendar','gcal','appointment','book time','find slot','busy','focus time','weekly overview','daily agenda','reschedule'],
+  };
+  let best = 'scout', bestScore = 0;
+  for (const [prefix, kws] of Object.entries(routing)) {
+    const score = kws.filter(kw => msg.includes(kw)).length;
+    if (score > bestScore) { bestScore = score; best = prefix; }
+  }
+  return best;
+}
+
+// Multi-agent routing — returns array of agent prefixes (1–4).
+// Detects compound prompts ("write a post and generate an image") and
+// returns multiple agents when different domains are addressed.
+function predictAgents(message) {
+  const msg = ` ${message.toLowerCase()} `;
+  const conjunctions = [' and ', ' with a ', ' with an ', ' also ', ' as well as ', ' plus ', ' & '];
+  const hasConjunction = conjunctions.some(c => msg.includes(c));
+
+  if (!hasConjunction) return [predictAgent(message)];
+
+  const routing = {
+    sentinel: ['security','vulnerability','scan','threat','attack','cve','exploit','firewall','malware','audit'],
+    builder:  ['code','build','develop','implement','create app','program','software','function','class','api','feature','module','refactor','debug','html','css','page'],
+    inspector:['test','quality','qa','bug','inspect','coverage','unit test','regression'],
+    watcher:  ['monitor','health','status','uptime','alert','metric','performance','cpu','memory'],
+    scout:    ['research','analyze','compare','evaluate','study','investigate','technology','trend','report'],
+    scribe:   ['document','write doc','readme','api doc','documentation','changelog','spec','wiki'],
+    devops:   ['deploy','infrastructure','ci/cd','pipeline','docker','kubernetes','server','terraform','cloud'],
+    marketer: ['marketing','linkedin','post','social media','content','campaign','brand','seo','newsletter'],
+    designer: ['design image','generate image','social image','banner','thumbnail','cover image','profile picture','og image','instagram image','youtube thumbnail','twitter header','visual design','image for'],
+    linter:   ['lint','eslint','prettier','ruff','pylint','mypy','stylelint','format code','code style','static analysis','auto-fix','autofix','linting','type check','clippy','shellcheck','hadolint','golangci'],
+    automator:['automate','automation','shortcut','shortcuts','applescript','osascript','fill form','scrape','browser automate','rpa','repetitive','clipboard','desktop','run shortcut','macro'],
+    scheduler:['calendar','schedule','meeting','event','agenda','free time','availability','timesheet','tempo','google calendar','gcal','appointment','book time','find slot','busy','focus time','weekly overview','daily agenda','reschedule'],
+  };
+
+  const scored = Object.entries(routing)
+    .map(([prefix, kws]) => [prefix, kws.filter(kw => msg.includes(kw)).length])
+    .filter(([, s]) => s > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  if (scored.length < 2) return [predictAgent(message)];
+
+  // Deduplicate: drop scout if others exist, resolve conflicts
+  let prefixes = scored.map(([p]) => p);
+  if (prefixes.length > 1) prefixes = prefixes.filter(p => p !== 'scout');
+  const conflicts = [['builder','linter'],['designer','scout']];
+  for (const [a, b] of conflicts) {
+    if (prefixes.includes(a) && prefixes.includes(b)) {
+      // keep the one that appears first (higher score)
+      const idxA = prefixes.indexOf(a), idxB = prefixes.indexOf(b);
+      prefixes.splice(Math.max(idxA, idxB), 1);
+    }
+  }
+  return prefixes.slice(0, 4);
+}
+
+const STATE_STYLE = {
+  idle:    { dot: 'bg-emerald-400', text: 'text-emerald-400', label: 'IDLE' },
+  busy:    { dot: 'bg-amber-400 animate-pulse', text: 'text-amber-400', label: 'BUSY' },
+  paused:  { dot: 'bg-slate-400', text: 'text-slate-400', label: 'PAUSED' },
+  error:   { dot: 'bg-red-500', text: 'text-red-400', label: 'ERROR' },
+  offline: { dot: 'bg-slate-600', text: 'text-slate-500', label: 'OFFLINE' },
+};
+
+function formatUptime(sec) {
+  if (!sec || sec < 60) return `${Math.floor(sec || 0)}s`;
+  if (sec < 3600) return `${Math.floor(sec/60)}m`;
+  return `${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+}
+
+/* ================================================================
+   Header
+   ================================================================ */
+function Header({ connected, health, onSettings }) {
+  const comp = health?.components || {};
+  return (
+    <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${connected ? 'bg-brand-500/20 glow-pulse' : 'bg-slate-700'}`}>
+            <Icon name="zap" size={18} className={connected ? 'text-brand-400' : 'text-slate-500'} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight">AgentArmy</h1>
+            <p className="text-xs text-slate-500 -mt-0.5">Command Center</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-5 text-xs">
+          {['database'].map(svc => {
+            const val = comp[svc];
+            const ok = val === 'healthy';
+            const missing = !val || val === 'unhealthy';
+            // Grey when not configured / not running (optional service), green when healthy, red only on explicit error
+            const dotClass = ok ? 'bg-emerald-400' : missing ? 'bg-slate-500' : 'bg-red-500';
+            const label = ok ? svc : missing ? `${svc} (offline)` : svc;
+            return (
+              <div key={svc} className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                <span className="text-slate-400 capitalize">{label}</span>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-red-500 animate-pulse'}`} />
+            <span className={connected ? 'text-emerald-400' : 'text-red-400'}>
+              {connected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+          <span className="text-slate-600 font-mono">v{health?.version || '—'}</span>
+          {onSettings && (
+            <button
+              onClick={onSettings}
+              className="ml-2 p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+              title="Settings"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ================================================================
+   Agent Card
+   ================================================================ */
+function AgentCard({ id, info }) {
+  const prefix = id.split('-')[0];
+  const meta = AGENT_META[prefix] || AGENT_META[info.role] || AGENT_META.devops;
+  const state = STATE_STYLE[info.state] || STATE_STYLE.offline;
+
+  return (
+    <div className={`agent-card rounded-xl border ${meta.border} ${meta.bg} p-4 fade-in`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-9 h-9 rounded-lg ${meta.bg} border ${meta.border} flex items-center justify-center`}>
+            <Icon name={meta.icon} size={18} className={meta.color} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">{info.name || info.role}</h3>
+            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{meta.label}</p>
+          </div>
+        </div>
+        <div className={`w-2.5 h-2.5 rounded-full ${state.dot}`} title={state.label} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="bg-slate-900/50 rounded-lg py-1.5 px-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tasks</p>
+          <p className="text-sm font-semibold font-mono text-emerald-400">{info.tasks_completed || 0}</p>
+        </div>
+        <div className="bg-slate-900/50 rounded-lg py-1.5 px-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Fails</p>
+          <p className="text-sm font-semibold font-mono text-red-400">{info.tasks_failed || 0}</p>
+        </div>
+        <div className="bg-slate-900/50 rounded-lg py-1.5 px-2">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Uptime</p>
+          <p className="text-sm font-semibold font-mono text-slate-300">{formatUptime(info.uptime_seconds)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Agent Grid
+   ================================================================ */
+function AgentGrid({ agents }) {
+  const entries = Object.entries(agents || {});
+  if (!entries.length) {
+    return (
+      <div className="text-center py-12 text-slate-500">
+        <Icon name="radio" size={32} className="mx-auto mb-3 opacity-40" />
+        <p className="text-sm">No agents connected</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+      {entries.map(([id, info]) => <AgentCard key={id} id={id} info={info} />)}
+    </div>
+  );
+}
+
+/* ================================================================
+   Worker Panel (cluster center mode)
+   ================================================================ */
+function WorkerPanel({ workers, health }) {
+  if (!workers || workers.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-500">
+        <Icon name="server" size={32} className="mx-auto mb-3 opacity-40" />
+        <p className="text-sm">No workers connected</p>
+        <p className="text-xs mt-1 text-slate-600">Workers will appear here when they register with this Command Center</p>
+      </div>
+    );
+  }
+
+  const platformIcon = { macos: '\u{1F34E}', windows: '\u{1FA9F}', linux: '\u{1F427}' };
+  const statusDot = { online: 'bg-emerald-400', busy: 'bg-amber-400', offline: 'bg-slate-600' };
+
+  return (
+    <div className="space-y-4">
+      {/* Cluster health summary */}
+      {health && (
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {[
+            { label: 'Workers', value: health.online_workers || 0, sub: `/ ${health.total_workers || 0}` },
+            { label: 'Agents', value: health.total_agents || 0, sub: 'total' },
+            { label: 'Avg Load', value: `${Math.round((health.aggregate_load || 0) * 100)}%`, sub: '' },
+            { label: 'Active Tasks', value: health.total_active_tasks || 0, sub: '' },
+          ].map((m, i) => (
+            <div key={i} className="bg-slate-800/60 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-slate-200">{m.value} <span className="text-xs font-normal text-slate-500">{m.sub}</span></div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider">{m.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Worker cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {workers.map(w => (
+          <div key={w.worker_id} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-3 hover:bg-slate-800/60 transition-colors">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`w-2 h-2 rounded-full ${statusDot[w.status] || statusDot.offline}`} />
+              <span className="text-sm font-medium text-slate-200 truncate">{w.name}</span>
+              <span className="ml-auto text-lg" title={w.platform}>{platformIcon[w.platform] || '\u{1F5A5}'}</span>
+            </div>
+            {/* Load bar */}
+            <div className="h-1.5 bg-slate-700/50 rounded-full mb-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  w.load > 0.8 ? 'bg-red-500' : w.load > 0.5 ? 'bg-amber-500' : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.round((w.load || 0) * 100)}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-slate-500">
+              <span>{w.agents?.length || 0} agents</span>
+              <span>{w.active_tasks || 0} active tasks</span>
+              <span className="uppercase">{w.status}</span>
+            </div>
+            {w.capabilities && w.capabilities.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {w.capabilities.slice(0, 6).map(c => (
+                  <span key={c} className="text-[9px] bg-slate-700/60 text-slate-400 rounded px-1.5 py-0.5">{c}</span>
+                ))}
+                {w.capabilities.length > 6 && (
+                  <span className="text-[9px] text-slate-500">+{w.capabilities.length - 6}</span>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Task Form + List
+   ================================================================ */
+function TaskPanel({ onSubmit, onDelete, onCancel, onOpenInChat, tasks }) {
+  const [desc, setDesc] = useState('');
+  const [priority, setPriority] = useState(3);
+  const [expanded, setExpanded] = useState({});
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!desc.trim()) return;
+    onSubmit(desc.trim(), priority);
+    setDesc('');
+  };
+
+  const toggleExpand = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+  const statusStyle = {
+    pending:     'bg-slate-700 text-slate-300',
+    submitted:   'bg-cyan-900/50 text-cyan-300',
+    assigned:    'bg-cyan-900/50 text-cyan-300',
+    in_progress: 'bg-amber-900/50 text-amber-300',
+    completed:   'bg-emerald-900/50 text-emerald-300',
+    failed:      'bg-red-900/50 text-red-300',
+    cancelled:   'bg-slate-800 text-slate-500',
+  };
+
+  const priorityLabel = { 1:'CRIT', 2:'HIGH', 3:'MED', 4:'LOW', 5:'BG' };
+  const priorityColor = { 1:'text-red-400', 2:'text-amber-400', 3:'text-blue-400', 4:'text-slate-400', 5:'text-slate-500' };
+  const isActive = (s) => ['pending','submitted','assigned','in_progress','queued'].includes(s);
+
+  return (
+    <div className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="mb-3">
+        <div className="flex gap-2">
+          <input
+            value={desc}
+            onChange={e => setDesc(e.target.value)}
+            placeholder="Describe a task..."
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm
+                       placeholder:text-slate-500 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20
+                       transition-colors"
+          />
+          <select
+            value={priority}
+            onChange={e => setPriority(Number(e.target.value))}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 text-xs
+                       focus:outline-none focus:border-brand-500/50 cursor-pointer"
+          >
+            <option value={1}>P1 Critical</option>
+            <option value={2}>P2 High</option>
+            <option value={3}>P3 Medium</option>
+            <option value={4}>P4 Low</option>
+          </select>
+          <button
+            type="submit"
+            className="bg-brand-600 hover:bg-brand-500 text-white rounded-lg px-4 py-2 text-sm
+                       font-medium transition-colors flex items-center gap-1.5"
+          >
+            <Icon name="send" size={14} />
+            Send
+          </button>
+        </div>
+      </form>
+
+      <div className="flex-1 overflow-y-auto scrollbar-thin space-y-1.5">
+        {tasks.length === 0 && (
+          <p className="text-xs text-slate-600 text-center py-8">No tasks yet</p>
+        )}
+        {tasks.map((t, i) => {
+          const tid = t.task_id || `local-${i}`;
+          const isExp = expanded[tid];
+          const hasResult = t.result && t.status === 'completed';
+          const hasError = t.error && t.status === 'failed';
+          const canCancel = isActive(t.status);
+
+          return (
+            <div key={tid} className="group bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 fade-in">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm text-slate-200 leading-snug flex-1">{t.description || '—'}</p>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-[10px] font-mono font-bold ${priorityColor[t.priority] || 'text-slate-500'}`}>
+                    {priorityLabel[t.priority] || 'P3'}
+                  </span>
+                  {canCancel && (
+                    <button
+                      onClick={() => onCancel && onCancel(t.task_id)}
+                      className="text-slate-500 hover:text-amber-400 transition-all p-0.5 rounded hover:bg-amber-500/10"
+                      title="Stop task"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onDelete && onDelete(t.task_id, i)}
+                    className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400
+                               transition-all p-0.5 rounded hover:bg-red-500/10"
+                    title="Delete task"
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusStyle[t.status] || statusStyle.pending}`}>
+                  {(t.status || 'pending').replace('_', ' ').toUpperCase()}
+                </span>
+                {t.assigned_agent && (
+                  <span className="text-[10px] text-slate-500">
+                    {t.assigned_agent}
+                  </span>
+                )}
+                {(hasResult || hasError) && (
+                  <button
+                    onClick={() => toggleExpand(tid)}
+                    className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors ml-1"
+                  >
+                    {isExp ? 'Hide' : 'Show'} response
+                  </button>
+                )}
+                {(hasResult || hasError) && t.task_id && onOpenInChat && (
+                  <button
+                    onClick={() => onOpenInChat(t.task_id)}
+                    className="text-[10px] text-emerald-400 hover:text-emerald-300 transition-colors ml-1 flex items-center gap-0.5"
+                    title="Continue this conversation in Chat"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    Open in Chat
+                  </button>
+                )}
+                {t.task_id && (
+                  <span className="text-[10px] text-slate-600 font-mono ml-auto">
+                    {t.task_id.slice(0, 8)}
+                  </span>
+                )}
+              </div>
+              {isExp && hasResult && (
+                <div className="mt-2 bg-slate-900/60 border border-slate-700/30 rounded-lg px-3 py-2">
+                  <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{t.result}</p>
+                </div>
+              )}
+              {isExp && hasError && (
+                <div className="mt-2 bg-red-900/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  <p className="text-xs text-red-300 whitespace-pre-wrap">{t.error}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Markdown Rendering + Code Blocks
+   ================================================================ */
+
+// Configure marked for safe rendering
+if (typeof marked !== 'undefined') {
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    highlight: function(code, lang) {
+      if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+        try { return hljs.highlight(code, { language: lang }).value; } catch {}
+      }
+      if (typeof hljs !== 'undefined') {
+        try { return hljs.highlightAuto(code).value; } catch {}
+      }
+      return code;
+    },
+  });
+}
+
+function CodeBlock({ code, lang, filePath, onApprove, onRun, autoApprove, approved }) {
+  const [collapsed, setCollapsed] = useState(true);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const lines = code.split('\n');
+  const lineCount = lines.length;
+  const isLong = lineCount > 12;
+  const previewLines = 8;
+
+  // Highlight the code
+  const highlighted = React.useMemo(() => {
+    if (typeof hljs === 'undefined') return code;
+    if (lang && hljs.getLanguage(lang)) {
+      try { return hljs.highlight(code, { language: lang }).value; } catch {}
+    }
+    try { return hljs.highlightAuto(code).value; } catch {}
+    return code;
+  }, [code, lang]);
+
+  // For collapsed view, take first N lines of highlighted code
+  const displayHtml = React.useMemo(() => {
+    if (!isLong || !collapsed) return highlighted;
+    // Split highlighted HTML by newlines, take first N
+    const hlLines = highlighted.split('\n');
+    return hlLines.slice(0, previewLines).join('\n');
+  }, [highlighted, isLong, collapsed]);
+
+  const [copyLabel, setCopyLabel] = useState('Copy');
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopyLabel('Copied!');
+      setTimeout(() => setCopyLabel('Copy'), 1500);
+    });
+  };
+
+  // Detect if this is a runnable shell block
+  const isShell = /^(bash|sh|shell|zsh|cmd|powershell|terminal|console)$/i.test(lang || '');
+  const [runStatus, setRunStatus] = useState(null); // null | 'running' | 'success' | 'error'
+
+  const handleRun = async () => {
+    if (!onRun) return;
+    setRunStatus('running');
+    try {
+      const result = await onRun(code);
+      setRunStatus(result.success ? 'success' : 'error');
+      // Auto-reset status after a few seconds
+      setTimeout(() => setRunStatus(null), 3000);
+    } catch (err) {
+      setRunStatus('error');
+      setTimeout(() => setRunStatus(null), 3000);
+    }
+  };
+
+  return (
+    <div className="my-2 rounded-lg border border-slate-700/60 overflow-hidden bg-[#0d1117]">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 border-b border-slate-700/40">
+        <div className="flex items-center gap-2 min-w-0">
+          {filePath && (
+            <span className="text-[10px] text-slate-400 font-mono truncate">{filePath}</span>
+          )}
+          {lang && !filePath && (
+            <span className="text-[10px] text-slate-500 font-mono">{lang}</span>
+          )}
+          <span className="text-[9px] text-slate-600">{lineCount} lines</span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setDiffOpen(true)}
+            className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors px-1.5 py-0.5 rounded hover:bg-slate-700/50 flex items-center gap-1"
+            title="Open in full view"
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            View
+          </button>
+          <button
+            onClick={handleCopy}
+            className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors px-1.5 py-0.5 rounded hover:bg-slate-700/50"
+          >
+            {copyLabel}
+          </button>
+          {/* Run button for bash/shell blocks */}
+          {isShell && onRun && (
+            <button
+              onClick={handleRun}
+              disabled={runStatus === 'running'}
+              className={`text-[10px] font-medium rounded px-2 py-0.5 transition-colors flex items-center gap-1 ${
+                runStatus === 'running'
+                  ? 'text-amber-400 bg-amber-500/10 border border-amber-500/30 cursor-wait'
+                  : runStatus === 'success'
+                  ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30'
+                  : runStatus === 'error'
+                  ? 'text-red-400 bg-red-500/10 border border-red-500/30'
+                  : 'text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
+              }`}
+            >
+              {runStatus === 'running' ? (
+                <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Running...</>
+              ) : runStatus === 'success' ? (
+                <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Done</>
+              ) : runStatus === 'error' ? (
+                <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Failed</>
+              ) : (
+                <><Icon name="terminal" size={10} /> Run</>
+              )}
+            </button>
+          )}
+          {/* Approve button for non-shell code blocks */}
+          {!isShell && onApprove && !approved && !autoApprove && (
+            <button
+              onClick={() => onApprove(filePath || 'code', code)}
+              className="text-[10px] font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded px-2 py-0.5 transition-colors flex items-center gap-1"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              Approve
+            </button>
+          )}
+          {!isShell && (approved || autoApprove) && onApprove && (
+            <span className="text-[10px] text-emerald-400/70 flex items-center gap-1 px-1.5">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              {autoApprove ? 'Auto-approved' : 'Approved'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Code content */}
+      <div className="relative">
+        <pre className="overflow-x-auto p-3 text-[12px] leading-[1.5] font-mono" style={{margin: 0, background: 'transparent'}}>
+          <code
+            className={lang ? `language-${lang}` : ''}
+            dangerouslySetInnerHTML={{ __html: displayHtml }}
+          />
+        </pre>
+
+        {/* Collapse/Expand overlay */}
+        {isLong && collapsed && (
+          <div className="absolute bottom-0 left-0 right-0">
+            <div className="h-8 bg-gradient-to-t from-[#0d1117] to-transparent" />
+            <div className="bg-[#0d1117] px-3 pb-2 flex justify-center">
+              <button
+                onClick={() => setCollapsed(false)}
+                className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-500/10 hover:bg-brand-500/15 border border-brand-500/20"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                Show all {lineCount} lines
+              </button>
+            </div>
+          </div>
+        )}
+        {isLong && !collapsed && (
+          <div className="px-3 pb-2 flex justify-center bg-[#0d1117]">
+            <button
+              onClick={() => setCollapsed(true)}
+              className="text-[10px] text-slate-500 hover:text-slate-400 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-slate-800"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+              Collapse
+            </button>
+          </div>
+        )}
+      </div>
+
+      {React.createElement(DiffModal, { open: diffOpen, onClose: () => setDiffOpen(false), code, lang, filePath })}
+    </div>
+  );
+}
+
+/* ================================================================
+   URL Detection Helpers + Rich Cards
+   ================================================================ */
+const JIRA_URL_RE = /https?:\/\/([a-zA-Z0-9_-]+)\.atlassian\.net\/(?:browse\/|.*?(?:boards?\/\d+.*?\/))([A-Z][A-Z0-9_]+-\d+)/gi;
+const FIGMA_URL_RE = /https?:\/\/(?:www\.)?figma\.com\/(?:file|design|proto|board)\/([a-zA-Z0-9]+)(?:\/([^?\s#]*))?(?:\?[^\s]*)?/gi;
+const GITHUB_URL_RE = /https?:\/\/github\.com\/([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)(?:\/tree\/([^/\s]+)(?:\/([^\s]*))?)?/gi;
+
+function detectUrls(text) {
+  const urls = [];
+  for (const m of text.matchAll(JIRA_URL_RE)) {
+    urls.push({ source: 'jira', domain: m[1], issue_key: m[2].toUpperCase(), url: m[0] });
+  }
+  for (const m of text.matchAll(FIGMA_URL_RE)) {
+    urls.push({ source: 'figma', file_key: m[1], title: (m[2] || '').replace(/-/g, ' '), url: m[0] });
+  }
+  for (const m of text.matchAll(GITHUB_URL_RE)) {
+    urls.push({ source: 'github', owner: m[1], repo: m[2].replace(/\.git$/, ''), url: m[0] });
+  }
+  return urls;
+}
+
+function JiraCard({ data, loading }) {
+  if (loading) {
+    return (
+      <div className="my-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center gap-3 animate-pulse">
+        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="h-3 w-32 bg-blue-500/20 rounded mb-1.5" />
+          <div className="h-2.5 w-48 bg-blue-500/10 rounded" />
+        </div>
+      </div>
+    );
+  }
+  if (!data || data.error) {
+    return (
+      <div className="my-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+        {data?.error || 'Failed to load Jira issue'}
+      </div>
+    );
+  }
+  const statusColor = {
+    'done': 'bg-emerald-500/20 text-emerald-400',
+    'in progress': 'bg-amber-500/20 text-amber-300',
+    'to do': 'bg-slate-700 text-slate-300',
+  };
+  const sc = statusColor[(data.status || '').toLowerCase()] || 'bg-slate-700 text-slate-300';
+
+  return (
+    <div className="my-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <a href={data.url} target="_blank" rel="noopener" className="text-xs font-mono text-blue-400 hover:text-blue-300">{data.issue_key}</a>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${sc}`}>{data.status}</span>
+            {data.priority && <span className="text-[9px] text-slate-500">{data.priority}</span>}
+          </div>
+          <p className="text-sm font-medium text-slate-200 mt-0.5 leading-snug">{data.summary}</p>
+          <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500">
+            {data.issue_type && <span>{data.issue_type}</span>}
+            {data.assignee && data.assignee !== 'Unassigned' && <span>→ {data.assignee}</span>}
+            {data.labels && data.labels.length > 0 && <span>{data.labels.join(', ')}</span>}
+          </div>
+          {data.description && (
+            <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">{data.description.slice(0, 200)}{data.description.length > 200 ? '...' : ''}</p>
+          )}
+          {data.subtasks && data.subtasks.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {data.subtasks.slice(0, 5).map(st => (
+                <span key={st.key} className={`text-[9px] px-1.5 py-0.5 rounded border ${st.status?.toLowerCase() === 'done' ? 'border-emerald-500/30 text-emerald-400' : 'border-slate-700 text-slate-400'}`}>
+                  {st.key}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FigmaCard({ data, loading }) {
+  if (loading) {
+    return (
+      <div className="my-2 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 flex items-center gap-3 animate-pulse">
+        <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="h-3 w-32 bg-violet-500/20 rounded mb-1.5" />
+          <div className="h-2.5 w-48 bg-violet-500/10 rounded" />
+        </div>
+      </div>
+    );
+  }
+  if (!data || data.error) {
+    return (
+      <div className="my-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+        {data?.error || 'Failed to load Figma design'}
+      </div>
+    );
+  }
+
+  const totalFrames = (data.pages || []).reduce((sum, p) => sum + (p.frames || []).length, 0);
+
+  return (
+    <div className="my-2 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <a href={data.url} target="_blank" rel="noopener" className="text-sm font-medium text-slate-200 hover:text-violet-300 transition-colors">{data.name}</a>
+          <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+            {data.pages && <span>{data.pages.length} pages</span>}
+            {totalFrames > 0 && <span>{totalFrames} frames</span>}
+            {Object.keys(data.components || {}).length > 0 && <span>{Object.keys(data.components).length} components</span>}
+            {data.last_modified && <span>Modified {data.last_modified.slice(0, 10)}</span>}
+          </div>
+          {data.thumbnail_url && (
+            <img src={data.thumbnail_url} alt="Figma thumbnail" className="mt-2 rounded-lg border border-slate-700/50 max-h-32 object-contain" />
+          )}
+          {data.node_image_url && (
+            <img src={data.node_image_url} alt="Selected frame" className="mt-2 rounded-lg border border-violet-500/30 max-h-40 object-contain" />
+          )}
+          {data.pages && data.pages.length > 0 && (
+            <div className="mt-2 space-y-0.5">
+              {data.pages.slice(0, 3).map(page => (
+                <div key={page.id} className="text-[10px]">
+                  <span className="text-slate-400 font-medium">{page.name}</span>
+                  <span className="text-slate-600 ml-1">({page.children_count} items)</span>
+                  {page.frames && page.frames.length > 0 && (
+                    <span className="text-slate-600 ml-1">— {page.frames.slice(0, 4).map(f => f.name).join(', ')}{page.frames.length > 4 ? '...' : ''}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GitHubCard({ data, loading }) {
+  if (loading) {
+    return (
+      <div className="my-2 rounded-xl border border-slate-500/20 bg-slate-500/5 p-3 flex items-center gap-3 animate-pulse">
+        <div className="w-8 h-8 rounded-lg bg-slate-500/20 flex items-center justify-center shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" strokeWidth="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="h-3 w-32 bg-slate-500/20 rounded mb-1.5" />
+          <div className="h-2.5 w-48 bg-slate-500/10 rounded" />
+        </div>
+      </div>
+    );
+  }
+  if (!data || data.error) {
+    return (
+      <div className="my-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+        {data?.error || 'Failed to load GitHub repo'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="my-2 rounded-xl border border-slate-500/20 bg-slate-500/5 p-3">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-lg bg-slate-500/20 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" strokeWidth="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <a href={data.url} target="_blank" rel="noopener" className="text-sm font-medium text-slate-200 hover:text-slate-100">{data.name}</a>
+            {data.is_template && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">Template</span>}
+          </div>
+          {data.description && (
+            <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{data.description}</p>
+          )}
+          <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500">
+            {data.language && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />{data.language}</span>}
+            {data.stars > 0 && <span>{data.stars.toLocaleString()} stars</span>}
+            {data.forks > 0 && <span>{data.forks.toLocaleString()} forks</span>}
+            {data.license && <span>{data.license}</span>}
+          </div>
+          {data.topics && data.topics.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {data.topics.slice(0, 8).map(t => (
+                <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-full border border-slate-700 text-slate-400">{t}</span>
+              ))}
+            </div>
+          )}
+          {data.tree_contents && data.tree_contents.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1 text-[9px] text-slate-500 font-mono">
+              {data.tree_contents.slice(0, 10).map(f => (
+                <span key={f.name} className={`px-1 py-0.5 rounded ${f.type === 'dir' ? 'text-brand-400' : 'text-slate-500'}`}>
+                  {f.name}{f.type === 'dir' ? '/' : ''}
+                </span>
+              ))}
+              {data.tree_contents.length > 10 && <span className="text-slate-600">+{data.tree_contents.length - 10} more</span>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UrlCards({ cards }) {
+  if (!cards || cards.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      {cards.map((card, i) => {
+        if (card.source === 'jira') return React.createElement(JiraCard, { key: i, data: card.data, loading: card.loading });
+        if (card.source === 'figma') return React.createElement(FigmaCard, { key: i, data: card.data, loading: card.loading });
+        if (card.source === 'github') return React.createElement(GitHubCard, { key: i, data: card.data, loading: card.loading });
+        return null;
+      })}
+    </div>
+  );
+}
+
+function MarkdownContent({ text, onApprove, onRun, autoApprove, approvedBlocks }) {
+  const containerRef = useRef(null);
+
+  // Parse markdown into tokens and render with custom code blocks
+  const rendered = React.useMemo(() => {
+    if (typeof marked === 'undefined') return null;
+
+    const tokens = marked.lexer(text || '');
+    const elements = [];
+    let idx = 0;
+
+    for (const token of tokens) {
+      if (token.type === 'code') {
+        // Detect file path from first comment line
+        let filePath = null;
+        const firstLine = (token.text || '').split('\n')[0];
+        const pathMatch = firstLine.match(/^\/\/\s*(.+\.\w+)$/) || firstLine.match(/^#\s*(.+\.\w+)$/);
+        if (pathMatch) filePath = pathMatch[1].trim();
+
+        const hasCodeChange = !!(token.lang || filePath || (token.text && token.text.length > 100));
+
+        elements.push(
+          React.createElement(CodeBlock, {
+            key: idx,
+            code: token.text || '',
+            lang: token.lang || '',
+            filePath,
+            onApprove: hasCodeChange ? onApprove : null,
+            onRun,
+            autoApprove,
+            approved: approvedBlocks && approvedBlocks.has(filePath || `block-${idx}`),
+          })
+        );
+      } else {
+        // Render non-code tokens as HTML via marked
+        const html = marked.parser([token]);
+        elements.push(
+          React.createElement('div', {
+            key: idx,
+            className: 'md-content',
+            dangerouslySetInnerHTML: { __html: html },
+          })
+        );
+      }
+      idx++;
+    }
+    return elements;
+  }, [text, onApprove, onRun, autoApprove, approvedBlocks]);
+
+  // Fallback if marked is not loaded
+  if (!rendered) {
+    return React.createElement('p', { className: 'whitespace-pre-wrap' }, text);
+  }
+
+  return React.createElement('div', { ref: containerRef }, rendered);
+}
+
+/* ================================================================
+   Diff Modal — shows code in a modal overlay, optionally as a diff
+   ================================================================ */
+function DiffModal({ open, onClose, code, lang, filePath }) {
+  if (!open) return null;
+
+  const highlighted = React.useMemo(() => {
+    if (typeof hljs === 'undefined' || !code) return code || '';
+    if (lang && hljs.getLanguage(lang)) {
+      try { return hljs.highlight(code, { language: lang }).value; } catch {}
+    }
+    try { return hljs.highlightAuto(code).value; } catch {}
+    return code;
+  }, [code, lang]);
+
+  const lines = code ? code.split('\n') : [];
+
+  const [copyLabel, setCopyLabel] = useState('Copy');
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopyLabel('Copied!');
+      setTimeout(() => setCopyLabel('Copy'), 1500);
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm fade-in" onClick={onClose}>
+      <div
+        className="bg-[#0d1117] border border-slate-700 rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col max-h-[85vh]"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-200 truncate">{filePath || 'Code'}</p>
+              <p className="text-[10px] text-slate-500">{lines.length} lines{lang ? ` · ${lang}` : ''}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={handleCopy} className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded hover:bg-slate-800 transition-colors">{copyLabel}</button>
+            <button onClick={onClose} className="text-slate-500 hover:text-slate-300 p-1 rounded hover:bg-slate-800 transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Code with line numbers */}
+        <div className="flex-1 overflow-auto min-h-0">
+          <table className="w-full border-collapse text-[12px] leading-[1.6] font-mono">
+            <tbody>
+              {lines.map((line, i) => {
+                // Detect added lines (start with +) for diff-like coloring
+                const isAdd = line.startsWith('+') && !line.startsWith('+++');
+                const isDel = line.startsWith('-') && !line.startsWith('---');
+                const rowBg = isAdd ? 'bg-emerald-500/8' : isDel ? 'bg-red-500/8' : '';
+                const numColor = isAdd ? 'text-emerald-600' : isDel ? 'text-red-600' : 'text-slate-600';
+                return (
+                  <tr key={i} className={rowBg}>
+                    <td className={`select-none text-right pr-3 pl-4 py-0 ${numColor} border-r border-slate-800/50`} style={{width: '1%', whiteSpace: 'nowrap'}}>{i + 1}</td>
+                    <td className="pl-4 pr-4 py-0 whitespace-pre" dangerouslySetInnerHTML={{ __html: highlighted.split('\n')[i] || '' }} />
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Chat Panel
+   ================================================================ */
+const CHAT_MODELS = [
+  { id: 'auto',                          label: 'Auto',                provider: null,    desc: 'Best available' },
+  { id: 'claude-opus-4-6',               label: 'Claude Opus 4.6',     provider: 'claude', desc: 'Most capable' },
+  { id: 'claude-sonnet-4-5-20250929',    label: 'Claude Sonnet 4.5',   provider: 'claude', desc: 'Fast & capable' },
+  { id: 'claude-haiku-4-5-20251001',     label: 'Claude Haiku 4.5',    provider: 'claude', desc: 'Fastest Claude' },
+  { id: 'gpt-4o',                        label: 'GPT-4o',              provider: 'openai', desc: 'OpenAI flagship' },
+  { id: 'gpt-4o-mini',                   label: 'GPT-4o Mini',         provider: 'openai', desc: 'Fast & cheap' },
+  { id: 'gemini-2.0-flash',              label: 'Gemini 2.0 Flash',    provider: 'gemini', desc: 'Google fast' },
+  { id: 'gemini-2.5-pro',                label: 'Gemini 2.5 Pro',      provider: 'gemini', desc: 'Google pro' },
+  { id: 'kimi-k2.5',                     label: 'Kimi K2.5',           provider: 'kimi',   desc: 'Moonshot AI multimodal' },
+  { id: 'ollama',                         label: 'Ollama (local)',      provider: 'ollama', desc: 'Local inference' },
+];
+
+/* ── Conversation List (sidebar in chat) ── */
+function ConversationList({ conversations, activeId, onSelect, onNew, onDelete }) {
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center justify-between px-1 mb-2 shrink-0">
+        <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">History</span>
+        <button
+          onClick={onNew}
+          className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors font-medium flex items-center gap-1"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-thin space-y-0.5 min-h-0">
+        {conversations.length === 0 && (
+          <p className="text-[10px] text-slate-600 text-center py-4">No conversations yet</p>
+        )}
+        {conversations.map(c => (
+          <div
+            key={c.id}
+            className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+              c.id === activeId
+                ? 'bg-brand-500/10 border border-brand-500/20'
+                : 'hover:bg-slate-800/60 border border-transparent'
+            }`}
+            onClick={() => onSelect(c.id)}
+          >
+            <Icon name="terminal" size={12} className={c.id === activeId ? 'text-brand-400' : 'text-slate-600'} />
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs truncate ${c.id === activeId ? 'text-slate-200 font-medium' : 'text-slate-400'}`}>
+                {c.title}
+              </p>
+              <p className="text-[9px] text-slate-600">{c.message_count || 0} msgs</p>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+              className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all p-0.5 rounded"
+              title="Delete conversation"
+            >
+              <Icon name="x" size={10} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunCommand, loading, activeAgent, onStop, queueCount, conversations, activeConvId, onSelectConv, onNewConv, onDeleteConv }) {
+  const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState('auto');
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  // Restore model from server-side prefs on mount
+  useEffect(() => {
+    api('/prefs').then(prefs => {
+      const saved = prefs?.selected_model;
+      if (saved && CHAT_MODELS.some(m => m.id === saved)) {
+        setSelectedModel(saved);
+      }
+    }).catch(() => {});
+  }, []);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [approvedBlocks, setApprovedBlocks] = useState(new Set());
+  const bottomRef = useRef(null);
+  const pickerRef = useRef(null);
+
+  // ── Speech-to-Text (STT) ───────────────────────────────────────
+  const [listening, setListening] = useState(false);
+  const [sttError, setSttError] = useState('');
+  const [sttPermission, setSttPermission] = useState('unknown'); // 'unknown' | 'prompt' | 'granted' | 'denied'
+  const recognitionRef = useRef(null);
+  const sttBaseText = useRef('');
+  const sttFinalRef = useRef('');
+  const hasSpeechAPI = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const hasMicAPI = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  const sttSupported = hasSpeechAPI || hasMicAPI;  // show button if either API exists
+
+  // Check mic permission on mount
+  useEffect(() => {
+    if (navigator.permissions?.query) {
+      navigator.permissions.query({ name: 'microphone' }).then(result => {
+        setSttPermission(result.state); // 'granted', 'denied', or 'prompt'
+        result.onchange = () => setSttPermission(result.state);
+      }).catch(() => {});
+    }
+  }, []);
+
+  const toggleSTT = useCallback(async () => {
+    setSttError('');
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    // Step 0: Check secure context (getUserMedia requires HTTPS or localhost)
+    if (!window.isSecureContext) {
+      setSttError('insecure');
+      return;
+    }
+
+    // Step 1: Request mic permission explicitly (triggers browser prompt)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setSttError('no-media-api');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Got permission — stop the stream immediately (Speech API manages its own)
+      stream.getTracks().forEach(t => t.stop());
+      setSttPermission('granted');
+    } catch (err) {
+      console.warn('Mic permission error:', err.name, err.message);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setSttPermission('denied');
+        setSttError('denied');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setSttError('no-mic');
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        setSttError('mic-busy');
+      } else if (err.name === 'AbortError') {
+        setSttError('mic-abort');
+      } else {
+        setSttError('mic-error:' + err.name + ':' + (err.message || '').slice(0, 80));
+      }
+      return;
+    }
+
+    // Step 2: Start Speech Recognition
+    if (!hasSpeechAPI) {
+      setSttError('no-speech-api');
+      return;
+    }
+
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+      sttBaseText.current = input;
+      sttFinalRef.current = '';
+      recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            sttFinalRef.current += transcript;
+          } else {
+            interim = transcript;
+          }
+        }
+        const base = sttBaseText.current;
+        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        const display = base + sep + sttFinalRef.current + interim;
+        setInput(display.trimEnd());
+      };
+      recognition.onerror = (e) => {
+        console.warn('STT error:', e.error, e.message);
+        if (e.error === 'no-speech') {
+          setSttError('no-speech');
+        } else if (e.error === 'not-allowed') {
+          setSttError('denied');
+          setSttPermission('denied');
+        } else if (e.error === 'network') {
+          setSttError('network');
+        } else if (e.error === 'audio-capture') {
+          setSttError('no-mic');
+        } else if (e.error === 'service-not-allowed') {
+          setSttError('service-denied');
+        } else {
+          setSttError('speech-error:' + e.error);
+        }
+        setListening(false);
+      };
+      recognition.onend = () => { setListening(false); };
+      recognitionRef.current = recognition;
+      recognition.start();
+      setListening(true);
+    } catch (err) {
+      console.error('STT start failed:', err);
+      setSttError('speech-error:' + err.message);
+      setListening(false);
+    }
+  }, [listening, hasSpeechAPI, input]);
+
+  const startEdit = (idx, text) => { setEditingIdx(idx); setEditText(text); };
+  const cancelEdit = () => { setEditingIdx(null); setEditText(''); };
+  const submitEdit = () => {
+    if (editText.trim() && onEditMessage) {
+      onEditMessage(editingIdx, editText.trim(), selectedModel);
+    }
+    cancelEdit();
+  };
+  const retryMsg = (idx) => {
+    if (onRetryMessage) onRetryMessage(idx, selectedModel);
+  };
+
+  // Track all pending code blocks for "Approve All"
+  const [pendingBlocks, setPendingBlocks] = useState([]);
+  const [verifyStatus, setVerifyStatus] = useState(null); // null | 'running' | 'pass' | 'fail'
+  const [verifyOutput, setVerifyOutput] = useState('');
+  const [e2eStatus, setE2eStatus] = useState(null); // null | 'running' | 'pass' | 'fail' | 'error'
+  const [e2eOutput, setE2eOutput] = useState('');
+  const [showE2ePanel, setShowE2ePanel] = useState(false);
+  const [e2eSetup, setE2eSetup] = useState(null); // detected Playwright config
+  const [smokeUrl, setSmokeUrl] = useState('');
+
+  const handleRun = useCallback(async (command) => {
+    if (onRunCommand) return onRunCommand(command);
+    // Fallback: direct API call if no terminal routing
+    const res = await api('/run', {
+      method: 'POST',
+      body: JSON.stringify({ command }),
+    });
+    return res;
+  }, [onRunCommand]);
+
+  const handleApprove = useCallback(async (blockId, code) => {
+    // Attempt to write to project directory
+    try {
+      await api('/approve', {
+        method: 'POST',
+        body: JSON.stringify({ filePath: blockId, code }),
+      });
+    } catch (err) {
+      console.warn('Approve write failed (may not be a file path):', err.message);
+      // Still mark as approved visually even if write fails (e.g. blockId is not a valid path)
+    }
+    setApprovedBlocks(prev => {
+      const next = new Set(prev);
+      next.add(blockId);
+      return next;
+    });
+    setPendingBlocks(prev => prev.filter(b => b.id !== blockId));
+  }, []);
+
+  const handleApproveAll = useCallback(async () => {
+    for (const block of pendingBlocks) {
+      await handleApprove(block.id, block.code);
+    }
+  }, [pendingBlocks, handleApprove]);
+
+  const handleVerifyBuild = useCallback(async () => {
+    setVerifyStatus('running');
+    setVerifyOutput('');
+    try {
+      const res = await api('/verify', {
+        method: 'POST',
+        body: JSON.stringify({ command: 'auto' }),
+      });
+      setVerifyStatus(res.status === 'pass' ? 'pass' : res.status === 'skipped' ? 'pass' : 'fail');
+      const output = (res.checks || []).map(c =>
+        `$ ${c.command}\n${c.success ? 'OK' : `EXIT ${c.exit_code}`}${c.stderr ? '\n' + c.stderr : ''}`
+      ).join('\n\n');
+      setVerifyOutput(output || res.message || 'No checks run.');
+    } catch (err) {
+      setVerifyStatus('fail');
+      setVerifyOutput(err.message);
+    }
+  }, []);
+
+  // ── E2E / Playwright test handlers ─────────────────────────────
+  const handleCheckE2eSetup = useCallback(async () => {
+    try {
+      const data = await api('/test/e2e/status');
+      setE2eSetup(data);
+    } catch { setE2eSetup(null); }
+  }, []);
+
+  const handleRunE2eTests = useCallback(async (opts = {}) => {
+    setE2eStatus('running');
+    setE2eOutput('');
+    try {
+      const res = await api('/test/e2e/run', {
+        method: 'POST',
+        body: JSON.stringify(opts),
+      });
+      setE2eStatus(res.status === 'pass' ? 'pass' : res.status === 'timeout' ? 'fail' : res.status === 'error' ? 'error' : 'fail');
+      const summary = res.summary || {};
+      let output = `Command: ${res.command || 'unknown'}\n`;
+      output += `Status: ${res.status} (exit ${res.exit_code})\n`;
+      if (summary.total != null) output += `Tests: ${summary.passed_count || 0}/${summary.total} passed\n`;
+      if (summary.failures) {
+        output += '\nFailures:\n';
+        summary.failures.forEach(f => { output += `  - ${f.title}: ${f.error?.slice(0, 200) || ''}\n`; });
+      }
+      if (res.stderr) output += `\n${res.stderr.slice(-1000)}`;
+      setE2eOutput(output);
+    } catch (err) {
+      setE2eStatus('error');
+      setE2eOutput(err.message);
+    }
+  }, []);
+
+  const handleSmokeTest = useCallback(async (url) => {
+    if (!url) return;
+    setE2eStatus('running');
+    setE2eOutput('');
+    try {
+      const res = await api('/test/e2e/smoke', {
+        method: 'POST',
+        body: JSON.stringify({ url, checks: ['status', 'title', 'no_console_errors'], screenshot: true }),
+      });
+      setE2eStatus(res.status === 'pass' ? 'pass' : res.status === 'error' ? 'error' : 'fail');
+      let output = `Smoke test: ${url}\n`;
+      Object.entries(res.checks || {}).forEach(([name, check]) => {
+        output += `  ${check.passed ? 'PASS' : 'FAIL'} ${name}: ${JSON.stringify(check.value)}\n`;
+      });
+      if (res.engine) output += `Engine: ${res.engine}\n`;
+      if (res.performance) {
+        const p = res.performance;
+        if (p.domContentLoaded != null) output += `\nPerformance: DOM ${p.domContentLoaded}ms, Load ${p.loadComplete}ms\n`;
+        else if (p.response_time_ms != null) output += `\nResponse time: ${p.response_time_ms}ms\n`;
+      }
+      if (res.screenshot) output += `\nScreenshot saved: ${res.screenshot}\n`;
+      if (res.message) output += `\n${res.message}\n`;
+      setE2eOutput(output);
+    } catch (err) {
+      setE2eStatus('error');
+      setE2eOutput(err.message);
+    }
+  }, []);
+
+  // Track pending code blocks from messages (exclude shell/run blocks)
+  const SHELL_LANGS = /^(bash|sh|shell|zsh|cmd|powershell|terminal|console)$/i;
+  const unapprovedCount = React.useMemo(() => {
+    if (typeof marked === 'undefined') return 0;
+    let count = 0;
+    const blocks = [];
+    for (const m of messages) {
+      if (m.role === 'user') continue;
+      try {
+        const tokens = marked.lexer(m.text || '');
+        let idx = 0;
+        for (const token of tokens) {
+          if (token.type === 'code') {
+            // Skip shell blocks — those get a Run button, not Approve
+            if (SHELL_LANGS.test(token.lang || '')) { idx++; continue; }
+            const firstLine = (token.text || '').split('\n')[0];
+            const pathMatch = firstLine.match(/^\/\/\s*(.+\.\w+)$/) || firstLine.match(/^#\s*(.+\.\w+)$/);
+            const filePath = pathMatch ? pathMatch[1].trim() : null;
+            const hasCodeChange = !!(token.lang || filePath || (token.text && token.text.length > 100));
+            const blockId = filePath || `block-${idx}`;
+            if (hasCodeChange && !approvedBlocks.has(blockId) && !autoApprove) {
+              count++;
+              blocks.push({ id: blockId, code: token.text || '' });
+            }
+          }
+          idx++;
+        }
+      } catch {}
+    }
+    setPendingBlocks(blocks);
+    return count;
+  }, [messages, approvedBlocks, autoApprove]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  // Close picker when clicking outside
+  useEffect(() => {
+    if (!showModelPicker) return;
+    const handler = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowModelPicker(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showModelPicker]);
+
+  const handleSend = (e) => {
+    e.preventDefault();
+    // Stop STT if active
+    if (listening) { recognitionRef.current?.stop(); setListening(false); }
+    if (!input.trim()) return;
+    onSend(input.trim(), selectedModel);
+    setInput('');
+  };
+
+  const activeModel = CHAT_MODELS.find(m => m.id === selectedModel) || CHAT_MODELS[0];
+
+  return (
+    <div className="flex h-full min-h-0">
+      {/* Conversation history sidebar (collapsible) */}
+      {showHistory && (
+        <div className="w-44 shrink-0 border-r border-slate-800 pr-2 mr-2">
+          <ConversationList
+            conversations={conversations}
+            activeId={activeConvId}
+            onSelect={(id) => { onSelectConv(id); }}
+            onNew={onNewConv}
+            onDelete={onDeleteConv}
+          />
+        </div>
+      )}
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        {/* Chat header with history toggle */}
+        <div className="flex items-center gap-2 mb-2 shrink-0">
+          <button
+            onClick={() => setShowHistory(p => !p)}
+            className={`p-1 rounded transition-colors ${showHistory ? 'bg-brand-500/15 text-brand-400' : 'text-slate-500 hover:text-slate-300'}`}
+            title={showHistory ? 'Hide history' : 'Show history'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
+          {activeConvId && (
+            <span className="text-[10px] text-slate-500 truncate flex-1">
+              {conversations.find(c => c.id === activeConvId)?.title || 'Chat'}
+            </span>
+          )}
+          <button
+            onClick={onNewConv}
+            className="text-[10px] text-brand-400 hover:text-brand-300 transition-colors font-medium ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-brand-500/10"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Chat
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2 mb-3 px-1 min-h-0">
+          {messages.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <Icon name="terminal" size={32} className="mx-auto mb-3 text-slate-600" />
+              <p className="text-sm text-slate-600">Send a message to chat with agents</p>
+              <p className="text-[10px] text-slate-700 mt-1">Your conversation will appear here</p>
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <React.Fragment key={i}>
+              <div className={`group flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} fade-in`}>
+                {/* Edit/Retry buttons for user messages — shown on hover, LEFT of bubble */}
+                {m.role === 'user' && editingIdx !== i && (
+                  <div className="flex items-center gap-0.5 mr-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      onClick={() => startEdit(i, m.text)}
+                      className="p-1 rounded hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+                      title="Edit message"
+                    >
+                      <Icon name="edit-2" size={12} />
+                    </button>
+                    <button
+                      onClick={() => retryMsg(i)}
+                      className="p-1 rounded hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors"
+                      title="Retry message"
+                    >
+                      <Icon name="refresh-cw" size={12} />
+                    </button>
+                  </div>
+                )}
+                {/* Multi-agent response — render per-agent cards */}
+                {m.role !== 'user' && m.agent === 'multi-agent' && m.responses ? (
+                  <div className="max-w-[85%] space-y-2">
+                    {m.responses.map((r, ri) => {
+                      const prefix = (r.agent_id || '').split('-')[0];
+                      const meta = AGENT_META[prefix] || AGENT_META.scout;
+                      const agentName = AGENT_NAMES[prefix] || prefix;
+                      return (
+                        <div key={ri} className={`chat-bubble rounded-xl px-3 py-2 text-sm leading-relaxed overflow-hidden ${meta.bg} border ${meta.border} text-slate-200`}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className={`w-4 h-4 rounded ${meta.bg} border ${meta.border} flex items-center justify-center shrink-0`}>
+                              {React.createElement(Icon, { name: meta.icon, size: 10, className: meta.color })}
+                            </div>
+                            <span className={`text-[10px] font-semibold ${meta.color} uppercase tracking-wider`}>{agentName}</span>
+                            {r.success === false && (
+                              <span className="text-[9px] text-red-400 bg-red-500/10 rounded px-1 py-0.5 ml-auto">failed</span>
+                            )}
+                          </div>
+                          {React.createElement(MarkdownContent, {
+                            text: r.response,
+                            onApprove: handleApprove,
+                            onRun: handleRun,
+                            autoApprove,
+                            approvedBlocks,
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={`chat-bubble max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed overflow-hidden ${
+                    m.role === 'user'
+                      ? 'bg-brand-600/20 border border-brand-500/20 text-brand-100'
+                      : 'bg-slate-800 border border-slate-700/50 text-slate-200'
+                  }`}>
+                    {m.role !== 'user' && m.agent && (
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">{m.agent}</p>
+                    )}
+                    {m.role === 'user' && editingIdx === i ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editText}
+                          onChange={e => setEditText(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitEdit(); }
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                          rows={2}
+                          autoFocus
+                          className="w-full bg-slate-900/50 border border-brand-500/30 rounded px-2 py-1.5 text-sm text-brand-100
+                                     focus:outline-none focus:border-brand-500/60 resize-none"
+                          style={{ minHeight: '40px', maxHeight: '120px' }}
+                          onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'; }}
+                        />
+                        <div className="flex justify-end gap-1.5">
+                          <button onClick={cancelEdit}
+                            className="px-2 py-0.5 text-[11px] rounded bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">
+                            Cancel
+                          </button>
+                          <button onClick={submitEdit}
+                            className="px-2 py-0.5 text-[11px] rounded bg-brand-600 hover:bg-brand-500 text-white transition-colors">
+                            Send
+                          </button>
+                        </div>
+                      </div>
+                    ) : m.role === 'user'
+                      ? React.createElement('p', { className: 'whitespace-pre-wrap' }, m.text)
+                      : React.createElement(MarkdownContent, {
+                          text: m.text,
+                          onApprove: handleApprove,
+                          onRun: handleRun,
+                          autoApprove,
+                          approvedBlocks,
+                        })
+                    }
+                  </div>
+                )}
+              </div>
+              {/* URL Rich Cards attached to this message */}
+              {m.urlCards && m.urlCards.length > 0 && (
+                <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} fade-in`}>
+                  <div className="max-w-[85%]">
+                    {React.createElement(UrlCards, { cards: m.urlCards })}
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+          {loading && (() => {
+            // Resolve which agents to show — support multi-agent via chatAgents prop
+            const multiAgents = (typeof activeAgent === 'object' && Array.isArray(activeAgent))
+              ? activeAgent
+              : (activeAgent ? [activeAgent] : ['scout']);
+            const isMulti = multiAgents.length > 1;
+
+            return (
+              <div className="flex justify-start fade-in">
+                <div className="bg-slate-800 border border-slate-700/50 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
+                  {/* Agent icons */}
+                  <div className="flex items-center gap-1">
+                    {multiAgents.map((agentKey, idx) => {
+                      const meta = AGENT_META[agentKey] || AGENT_META.scout;
+                      return React.createElement('div', {
+                        key: agentKey,
+                        className: `w-5 h-5 rounded ${meta.bg} border ${meta.border} flex items-center justify-center shrink-0`,
+                      }, React.createElement(Icon, { name: meta.icon, size: 11, className: meta.color }));
+                    })}
+                  </div>
+                  {/* Bouncing dots */}
+                  <div className="flex gap-1 items-center">
+                    {(() => {
+                      const dotColor = AGENT_DOT_COLORS[multiAgents[0]] || 'bg-brand-400';
+                      return [0, 150, 300].map(d =>
+                        React.createElement('span', {
+                          key: d,
+                          className: `w-1.5 h-1.5 ${dotColor} rounded-full animate-bounce`,
+                          style: { animationDelay: `${d}ms` },
+                        })
+                      );
+                    })()}
+                  </div>
+                  {/* Label */}
+                  {isMulti ? (
+                    <span className="text-xs text-slate-300 ml-1 font-medium">
+                      {multiAgents.map((ak, i) => {
+                        const meta = AGENT_META[ak] || AGENT_META.scout;
+                        const name = AGENT_NAMES[ak] || ak;
+                        return React.createElement(React.Fragment, { key: ak },
+                          i > 0 && React.createElement('span', { className: 'text-slate-600 mx-1' }, '+'),
+                          React.createElement('span', { className: meta.color }, name),
+                        );
+                      })}
+                      <span className="text-slate-500 ml-1">working in parallel...</span>
+                    </span>
+                  ) : (
+                    <span className={`text-xs ${(AGENT_META[multiAgents[0]] || AGENT_META.scout).color} ml-1 font-medium`}>
+                      {AGENT_NAMES[multiAgents[0]] || 'Agent'} is thinking...
+                    </span>
+                  )}
+                  {onStop && (
+                    <button
+                      onClick={onStop}
+                      className="ml-2 px-2 py-0.5 rounded-md bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 hover:text-red-300 transition-colors text-[10px] font-medium flex items-center gap-1"
+                      title="Stop current task"
+                    >
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                      Stop
+                    </button>
+                  )}
+                  {queueCount > 0 && (
+                    <span className="ml-2 text-[10px] text-slate-500 bg-slate-700/50 rounded-full px-2 py-0.5">
+                      +{queueCount} queued
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Model selector + auto-approve + input */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="relative" ref={pickerRef}>
+              <button
+                type="button"
+                onClick={() => setShowModelPicker(p => !p)}
+                className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 transition-colors px-1 py-0.5 rounded"
+              >
+                <Icon name="zap" size={11} className="text-brand-400" />
+                <span className="font-medium">{activeModel.label}</span>
+                <Icon name="chevronDown" size={10} className="" />
+              </button>
+
+            {showModelPicker && (
+              <div className="absolute bottom-full left-0 mb-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 w-64 py-1 max-h-[280px] overflow-y-auto">
+                {CHAT_MODELS.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setSelectedModel(m.id); api('/prefs', { method: 'PUT', body: JSON.stringify({ selected_model: m.id }) }).catch(() => {}); setShowModelPicker(false); }}
+                    className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-slate-700/50 transition-colors ${
+                      selectedModel === m.id ? 'bg-slate-700/30' : ''
+                    }`}
+                  >
+                    <div>
+                      <p className={`text-xs font-medium ${selectedModel === m.id ? 'text-brand-400' : 'text-slate-300'}`}>{m.label}</p>
+                      <p className="text-[10px] text-slate-500">{m.desc}</p>
+                    </div>
+                    {selectedModel === m.id && <Icon name="check" size={14} className="text-brand-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Approve All button — shown when there are unapproved blocks */}
+              {unapprovedCount > 0 && !autoApprove && (
+                <button
+                  onClick={handleApproveAll}
+                  className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition-colors text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 font-medium"
+                  title={`Approve all ${unapprovedCount} pending code changes`}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  Approve all ({unapprovedCount})
+                </button>
+              )}
+
+              {/* Verify Build button */}
+              <button
+                onClick={handleVerifyBuild}
+                disabled={verifyStatus === 'running'}
+                className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition-colors font-medium ${
+                  verifyStatus === 'pass'
+                    ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                    : verifyStatus === 'fail'
+                    ? 'text-red-400 bg-red-500/10 border border-red-500/20'
+                    : verifyStatus === 'running'
+                    ? 'text-amber-400 bg-amber-500/10 border border-amber-500/20 animate-pulse'
+                    : 'text-slate-500 hover:text-slate-400 border border-transparent'
+                }`}
+                title={verifyOutput || 'Run build verification on your project'}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                {verifyStatus === 'running' ? 'Verifying...' : verifyStatus === 'pass' ? 'Build OK' : verifyStatus === 'fail' ? 'Build Failed' : 'Verify'}
+              </button>
+
+              {/* E2E Test button */}
+              <button
+                onClick={() => { setShowE2ePanel(p => !p); if (!e2eSetup) handleCheckE2eSetup(); }}
+                disabled={e2eStatus === 'running'}
+                className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded transition-colors font-medium ${
+                  e2eStatus === 'pass'
+                    ? 'text-cyan-400 bg-cyan-500/10 border border-cyan-500/20'
+                    : e2eStatus === 'fail' || e2eStatus === 'error'
+                    ? 'text-red-400 bg-red-500/10 border border-red-500/20'
+                    : e2eStatus === 'running'
+                    ? 'text-amber-400 bg-amber-500/10 border border-amber-500/20 animate-pulse'
+                    : 'text-slate-500 hover:text-slate-400 border border-transparent'
+                }`}
+                title={e2eOutput || 'Run Playwright E2E tests'}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                {e2eStatus === 'running' ? 'Testing...' : e2eStatus === 'pass' ? 'E2E OK' : e2eStatus === 'fail' ? 'E2E Fail' : 'E2E Test'}
+              </button>
+
+              {/* Auto-approve toggle */}
+              <button
+                onClick={() => setAutoApprove(p => !p)}
+                className={`flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded transition-colors ${
+                  autoApprove
+                    ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+                    : 'text-slate-500 hover:text-slate-400'
+                }`}
+                title={autoApprove ? 'Auto-approve is ON — all code changes are accepted automatically' : 'Click to auto-approve all code changes'}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                {autoApprove ? 'Auto-approve ON' : 'Auto-approve'}
+              </button>
+            </div>
+          </div>
+
+          {/* E2E Test Panel (expandable) */}
+          {showE2ePanel && (
+            <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-3 space-y-2 mb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Playwright E2E Tests</span>
+                <button onClick={() => setShowE2ePanel(false)} className="text-slate-500 hover:text-slate-300">
+                  <Icon name="x" size={12} />
+                </button>
+              </div>
+
+              {/* Setup status */}
+              {e2eSetup && (
+                <div className="text-[10px] text-slate-500 flex items-center gap-2 flex-wrap">
+                  <span className={e2eSetup.chromium_ready ? 'text-emerald-400' : e2eSetup.installed ? 'text-amber-400' : 'text-red-400'}>
+                    {e2eSetup.chromium_ready ? 'Chromium ready' : e2eSetup.installed ? 'Playwright installed (no Chromium)' : 'Not installed'}
+                  </span>
+                  {e2eSetup.language && <span className="bg-slate-700 px-1.5 py-0.5 rounded">{e2eSetup.language}</span>}
+                  {e2eSetup.config_file && <span className="bg-slate-700 px-1.5 py-0.5 rounded">{e2eSetup.config_file}</span>}
+                  {e2eSetup.test_files?.length > 0 && <span>{e2eSetup.test_files.length} test file(s)</span>}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {e2eSetup?.installed && e2eSetup?.test_files?.length > 0 ? (
+                  <button
+                    onClick={() => handleRunE2eTests()}
+                    disabled={e2eStatus === 'running'}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold bg-cyan-600 hover:bg-cyan-500 text-white rounded transition-colors disabled:opacity-50"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Run All Tests
+                  </button>
+                ) : null}
+
+                {/* Smoke test with URL input */}
+                <div className="flex items-center gap-1">
+                  <input
+                    value={smokeUrl}
+                    onChange={e => setSmokeUrl(e.target.value)}
+                    placeholder="http://localhost:3000"
+                    className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-[10px] text-slate-300 placeholder-slate-600 w-44 focus:outline-none focus:border-cyan-500"
+                  />
+                  <button
+                    onClick={() => handleSmokeTest(smokeUrl)}
+                    disabled={!smokeUrl || e2eStatus === 'running'}
+                    className="px-2 py-0.5 text-[10px] font-semibold bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors disabled:opacity-50"
+                  >
+                    Smoke Test
+                  </button>
+                </div>
+
+                {!e2eSetup?.installed && (
+                  <button
+                    onClick={async () => {
+                      setE2eStatus('running');
+                      setE2eOutput('Installing Playwright...');
+                      try {
+                        const res = await api('/test/e2e/install', { method: 'POST', body: JSON.stringify({ language: 'auto' }) });
+                        setE2eStatus(res.status === 'pass' ? 'pass' : 'fail');
+                        setE2eOutput(res.steps?.map(s => `${s.command}: ${s.success ? 'OK' : s.stderr?.slice(0, 200)}`).join('\n') || '');
+                        handleCheckE2eSetup();
+                      } catch (err) { setE2eStatus('error'); setE2eOutput(err.message); }
+                    }}
+                    disabled={e2eStatus === 'running'}
+                    className="px-2.5 py-1 text-[10px] font-semibold bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors disabled:opacity-50"
+                  >
+                    Install Playwright
+                  </button>
+                )}
+              </div>
+
+              {/* Test output */}
+              {e2eOutput && (
+                <pre className="bg-slate-900 border border-slate-800 rounded p-2 text-[10px] text-slate-400 max-h-32 overflow-y-auto scrollbar-thin whitespace-pre-wrap font-mono">{e2eOutput}</pre>
+              )}
+            </div>
+          )}
+
+          {sttError && (
+            <div className="mb-2 p-2.5 rounded-lg border text-[11px] leading-relaxed bg-slate-800/80 border-slate-700">
+              {sttError === 'denied' && (
+                <div>
+                  <p className="font-semibold text-red-400 mb-1">Microphone access denied</p>
+                  <p className="text-slate-400">To enable voice input:</p>
+                  <ol className="text-slate-400 mt-1 ml-3 space-y-0.5 list-decimal">
+                    <li>Click the <span className="text-slate-300 font-medium">lock/site icon</span> in the address bar</li>
+                    <li>Find <span className="text-slate-300 font-medium">Microphone</span> and set to <span className="text-emerald-400 font-medium">Allow</span></li>
+                    <li>Reload the page, then click the mic button again</li>
+                  </ol>
+                  <p className="text-slate-500 mt-1">macOS: also check System Settings &gt; Privacy &amp; Security &gt; Microphone &gt; allow your browser</p>
+                </div>
+              )}
+              {sttError === 'service-denied' && (
+                <div>
+                  <p className="font-semibold text-red-400 mb-1">Speech service not allowed</p>
+                  <p className="text-slate-400">The browser's speech recognition service was blocked. This can happen when:</p>
+                  <ul className="text-slate-400 mt-1 ml-3 space-y-0.5 list-disc">
+                    <li>Running on <span className="text-slate-300 font-medium">http://</span> instead of <span className="text-emerald-400">https://</span> or <span className="text-emerald-400">localhost</span></li>
+                    <li>Browser settings restrict speech services</li>
+                  </ul>
+                  <p className="text-slate-500 mt-1">Try accessing the dashboard via <span className="text-emerald-400 font-medium">http://localhost:{'{'}port{'}'}</span> instead.</p>
+                </div>
+              )}
+              {sttError === 'insecure' && (
+                <div>
+                  <p className="font-semibold text-amber-400 mb-1">Secure connection required</p>
+                  <p className="text-slate-400">Microphone access requires HTTPS or localhost. You're accessing via <code className="text-orange-400 text-[10px]">{window.location.origin}</code>.</p>
+                  <p className="text-slate-400 mt-1">Open the dashboard at <span className="text-emerald-400 font-medium">http://localhost:{window.location.port || '8000'}</span> instead.</p>
+                </div>
+              )}
+              {sttError === 'no-media-api' && (
+                <div>
+                  <p className="font-semibold text-amber-400 mb-1">Media API not available</p>
+                  <p className="text-slate-400">Your browser doesn't support media devices on this page. Current URL: <code className="text-orange-400 text-[10px]">{window.location.origin}</code></p>
+                  <p className="text-slate-400 mt-1">Try opening in <span className="text-slate-300 font-medium">Google Chrome</span> at <span className="text-emerald-400">http://localhost:{window.location.port || '8000'}</span>.</p>
+                </div>
+              )}
+              {sttError === 'no-mic' && (
+                <p className="text-amber-400">No microphone found. Please connect a microphone and try again.</p>
+              )}
+              {sttError === 'mic-busy' && (
+                <p className="text-amber-400">Microphone is in use by another app. Close other apps using the mic, then try again.</p>
+              )}
+              {sttError === 'mic-abort' && (
+                <p className="text-amber-400">Microphone request was aborted. Please try again.</p>
+              )}
+              {sttError === 'no-speech' && (
+                <p className="text-amber-400">No speech detected. Click the mic and try speaking again.</p>
+              )}
+              {sttError === 'no-speech-api' && (
+                <div>
+                  <p className="font-semibold text-amber-400 mb-1">Speech recognition not available</p>
+                  <p className="text-slate-400">This browser doesn't support the Web Speech API. Please open the dashboard in <span className="text-slate-300 font-medium">Google Chrome</span> for voice input.</p>
+                </div>
+              )}
+              {sttError === 'network' && (
+                <p className="text-amber-400">Speech service unavailable — Chrome's speech recognition requires an internet connection.</p>
+              )}
+              {sttError.startsWith('mic-error:') && (
+                <div>
+                  <p className="text-red-400">Microphone error. Try reloading the page.</p>
+                  <p className="text-slate-600 text-[9px] mt-0.5 font-mono">{sttError}</p>
+                </div>
+              )}
+              {sttError.startsWith('speech-error') && (
+                <div>
+                  <p className="text-red-400">Speech recognition failed. Try reloading the page.</p>
+                  <p className="text-slate-600 text-[9px] mt-0.5 font-mono">{sttError}</p>
+                </div>
+              )}
+              <button onClick={() => setSttError('')} className="mt-1.5 text-slate-500 hover:text-slate-300 underline text-[10px]">Dismiss</button>
+            </div>
+          )}
+          <form onSubmit={handleSend} className="flex gap-2 items-end">
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e);
+                }
+              }}
+              placeholder={loading ? "Type to queue next message..." : listening ? "Listening..." : "Chat with AgentArmy..."}
+              rows={1}
+              style={{ maxHeight: '150px' }}
+              onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'; }}
+              className={`flex-1 bg-slate-800 border rounded-lg px-3 py-2.5 text-sm resize-none
+                         placeholder:text-slate-500 focus:outline-none focus:ring-1
+                         transition-colors scrollbar-thin ${listening
+                           ? 'border-red-500/60 focus:border-red-500/60 focus:ring-red-500/20'
+                           : 'border-slate-700 focus:border-brand-500/50 focus:ring-brand-500/20'}`}
+            />
+            <button
+              type="button"
+              onClick={toggleSTT}
+              className={`rounded-lg px-3 py-2.5 transition-colors shrink-0 relative ${listening
+                ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse'
+                : sttPermission === 'denied'
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-500'
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
+              title={listening ? 'Stop listening' : sttPermission === 'denied' ? 'Microphone blocked — click for help' : 'Voice input'}
+            >
+              {React.createElement(Icon, { name: 'mic', size: 16 })}
+              {sttPermission === 'denied' && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!input.startsWith('/imagine ')) {
+                  setInput('/imagine ' + input);
+                }
+              }}
+              className="rounded-lg px-3 py-2.5 transition-colors shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-300"
+              title="Generate image (/imagine prompt)"
+            >
+              {React.createElement(Icon, { name: 'image', size: 16 })}
+            </button>
+            <button
+              type="submit"
+              className="bg-brand-600 hover:bg-brand-500 text-white rounded-lg px-4 py-2.5 transition-colors shrink-0"
+            >
+              {React.createElement(Icon, { name: 'send', size: 16 })}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Stats Bar
+   ================================================================ */
+function StatsBar({ agents, health }) {
+  const entries = Object.values(agents || {});
+  const totalTasks = entries.reduce((s, a) => s + (a.tasks_completed || 0), 0);
+  const totalFails = entries.reduce((s, a) => s + (a.tasks_failed || 0), 0);
+  const busyCount = entries.filter(a => a.state === 'busy').length;
+  const idleCount = entries.filter(a => a.state === 'idle').length;
+
+  const stats = [
+    { label: 'Agents', value: entries.length, icon: 'radio', color: 'text-brand-400' },
+    { label: 'Idle', value: idleCount, icon: 'check', color: 'text-emerald-400' },
+    { label: 'Busy', value: busyCount, icon: 'activity', color: 'text-amber-400' },
+    { label: 'Tasks Done', value: totalTasks, icon: 'zap', color: 'text-violet-400' },
+    { label: 'Failures', value: totalFails, icon: 'alert', color: totalFails > 0 ? 'text-red-400' : 'text-slate-500' },
+  ];
+
+  return (
+    <div className="grid grid-cols-5 gap-3">
+      {stats.map(s => (
+        <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 flex items-center gap-3">
+          <Icon name={s.icon} size={20} className={`${s.color} opacity-70`} />
+          <div>
+            <p className={`text-xl font-bold font-mono ${s.color}`}>{s.value}</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ================================================================
+   Directory Browser Modal
+   ================================================================ */
+function DirectoryBrowser({ open, onClose, onSelect, initialPath }) {
+  const [currentPath, setCurrentPath] = useState('');
+  const [entries, setEntries] = useState([]);
+  const [parentPath, setParentPath] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [manualInput, setManualInput] = useState('');
+  const [showManual, setShowManual] = useState(false);
+
+  const browse = async (path = '') => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = path ? `?path=${encodeURIComponent(path)}` : '';
+      const res = await api(`/api/setup/browse${params}`);
+      setCurrentPath(res.current);
+      setParentPath(res.parent);
+      setEntries(res.entries || []);
+      setManualInput(res.current);
+    } catch (err) {
+      setError(err.message || 'Cannot browse this directory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      // Start at current project directory if available
+      browse(initialPath || '');
+    }
+  }, [open]);
+
+  const handleSelect = async () => {
+    if (!currentPath) return;
+    setLoading(true);
+    try {
+      const res = await api('/api/setup/project', {
+        method: 'POST',
+        body: JSON.stringify({ path: currentPath }),
+      });
+      onSelect(res);
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to set directory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualGo = () => {
+    if (manualInput.trim()) browse(manualInput.trim());
+    setShowManual(false);
+  };
+
+  if (!open) return null;
+
+  const dirs = entries.filter(e => e.is_dir);
+  const currentName = currentPath.split('/').filter(Boolean).pop() || '/';
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm fade-in">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-xl mx-4 flex flex-col max-h-[80vh]">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-200">Select Project Directory</h3>
+            <p className="text-[10px] text-slate-500 mt-0.5">Browse to your project folder</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+            <Icon name="x" size={16} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* Path bar */}
+        <div className="px-5 py-2.5 border-b border-slate-800/50 flex items-center gap-2 shrink-0">
+          {parentPath && (
+            <button
+              onClick={() => browse(parentPath)}
+              className="p-1 rounded hover:bg-slate-800 transition-colors shrink-0"
+              title="Go up"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </button>
+          )}
+          {showManual ? (
+            <div className="flex-1 flex gap-2">
+              <input
+                autoFocus
+                value={manualInput}
+                onChange={e => setManualInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleManualGo(); if (e.key === 'Escape') setShowManual(false); }}
+                className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-mono
+                           focus:outline-none focus:border-brand-500/50"
+              />
+              <button onClick={handleManualGo} className="text-xs text-brand-400 hover:text-brand-300 px-2">Go</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowManual(true)}
+              className="flex-1 text-left text-xs text-slate-400 font-mono truncate hover:text-slate-300 transition-colors px-1.5 py-1 rounded hover:bg-slate-800/50"
+              title="Click to type a path manually"
+            >
+              {currentPath}
+            </button>
+          )}
+        </div>
+
+        {/* Directory listing */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {error && (
+            <div className="px-5 py-3">
+              <p className="text-xs text-red-400">{error}</p>
+            </div>
+          )}
+
+          {!loading && dirs.length === 0 && !error && (
+            <div className="text-center py-8">
+              <Icon name="folder" size={24} className="mx-auto mb-2 text-slate-600" />
+              <p className="text-xs text-slate-500">No subdirectories here</p>
+            </div>
+          )}
+
+          {!loading && dirs.map(entry => (
+            <button
+              key={entry.path}
+              onClick={() => browse(entry.path)}
+              className="w-full text-left px-5 py-2.5 flex items-center gap-3 hover:bg-slate-800/60 transition-colors border-b border-slate-800/30 last:border-0 group"
+            >
+              <Icon name="folder" size={16} className="text-brand-400/70 shrink-0 group-hover:text-brand-400" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-300 group-hover:text-slate-100 truncate">{entry.name}</span>
+                  {entry.has_git && (
+                    <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/10 rounded px-1 py-0.5 shrink-0">
+                      <Icon name="gitBranch" size={8} className="text-emerald-400" />
+                      git
+                    </span>
+                  )}
+                </div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 group-hover:text-slate-400 shrink-0">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
+          ))}
+        </div>
+
+        {/* Footer — select current directory */}
+        <div className="px-5 py-3.5 border-t border-slate-800 flex items-center justify-between shrink-0 bg-slate-900/80">
+          <div className="min-w-0 flex-1 mr-4">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Selected</p>
+            <p className="text-xs text-slate-300 font-medium truncate">{currentName}</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={onClose}
+              className="text-xs text-slate-400 hover:text-slate-300 px-3 py-2 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSelect}
+              disabled={loading}
+              className="bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-lg px-4 py-2 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Setting...' : 'Select this folder'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   Project Directory Bar
+   ================================================================ */
+function ProjectBar({ projectDir, onProjectChange }) {
+  const [browserOpen, setBrowserOpen] = useState(false);
+
+  const dirName = projectDir?.project_dir
+    ? projectDir.project_dir.split('/').filter(Boolean).pop()
+    : null;
+
+  return (
+    <React.Fragment>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 flex items-center gap-3">
+        <Icon name="folder" size={16} className="text-brand-400 shrink-0" />
+
+        {projectDir?.project_dir ? (
+          <div className="flex-1 flex items-center gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-200 truncate">{dirName}</span>
+                {projectDir.has_git && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 rounded px-1.5 py-0.5">
+                    <Icon name="gitBranch" size={10} className="text-emerald-400" />
+                    git
+                  </span>
+                )}
+                {projectDir.has_agents_md && (
+                  <span className="flex items-center gap-1 text-[10px] text-violet-400 bg-violet-500/10 rounded px-1.5 py-0.5" title={`Agent instructions: ${projectDir.agents_md_name}`}>
+                    <Icon name="filetext" size={10} className="text-violet-400" />
+                    {projectDir.agents_md_name || 'AGENTS.md'}
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-500">{projectDir.file_count} items</span>
+              </div>
+              <p className="text-[10px] text-slate-500 truncate">{projectDir.project_dir}</p>
+            </div>
+            <button
+              onClick={() => setBrowserOpen(true)}
+              className="shrink-0 text-xs text-slate-500 hover:text-brand-400 transition-colors px-2 py-1"
+            >
+              Change
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setBrowserOpen(true)}
+            className="flex-1 text-left text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            Select a project directory...
+          </button>
+        )}
+      </div>
+
+      <DirectoryBrowser
+        open={browserOpen}
+        onClose={() => setBrowserOpen(false)}
+        onSelect={onProjectChange}
+        initialPath={projectDir?.project_dir || ''}
+      />
+    </React.Fragment>
+  );
+}
+
+/* ================================================================
+   Terminal Panel — interactive shell in the project directory
+   ================================================================ */
+const TerminalPanel = React.forwardRef(function TerminalPanel(props, ref) {
+  const [input, setInput] = useState('');
+  const [history, setHistory] = useState([]);
+  const [cmdHistory, setCmdHistory] = useState([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history]);
+
+  // Focus input when panel mounts
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const runCmd = async (cmd) => {
+    if (!cmd.trim()) return;
+
+    const trimmed = cmd.trim();
+
+    // Handle client-side commands
+    if (/^(clear|cls)$/i.test(trimmed)) {
+      setHistory([]);
+      setInput('');
+      return { success: true, stdout: '', stderr: '', exit_code: 0 };
+    }
+
+    // Add to command history for up/down arrow
+    setCmdHistory(prev => [...prev, cmd]);
+    setHistoryIdx(-1);
+
+    // Show the command in output
+    setHistory(prev => [...prev, { type: 'cmd', text: cmd }]);
+    setInput('');
+    setRunning(true);
+
+    try {
+      const res = await api('/run', {
+        method: 'POST',
+        body: JSON.stringify({ command: cmd }),
+      });
+
+      const output = (res.stdout || '') + (res.stderr ? (res.stdout ? '\n' : '') + res.stderr : '');
+      setHistory(prev => [...prev, {
+        type: res.success ? 'out' : 'err',
+        text: output || (res.success ? '(no output)' : `Exit code: ${res.exit_code}`),
+        exitCode: res.exit_code,
+      }]);
+      return res;
+    } catch (err) {
+      setHistory(prev => [...prev, { type: 'err', text: err.message || 'Command failed' }]);
+      return { success: false, stdout: '', stderr: err.message || 'Command failed', exit_code: -1 };
+    } finally {
+      setRunning(false);
+      // Re-focus input after command completes
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  };
+
+  // Expose runCmd to parent via ref
+  React.useImperativeHandle(ref, () => ({ runCmd }));
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      runCmd(input);
+    }
+    // Up arrow — previous command
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (cmdHistory.length === 0) return;
+      const newIdx = historyIdx < 0 ? cmdHistory.length - 1 : Math.max(0, historyIdx - 1);
+      setHistoryIdx(newIdx);
+      setInput(cmdHistory[newIdx]);
+    }
+    // Down arrow — next command
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIdx < 0) return;
+      const newIdx = historyIdx + 1;
+      if (newIdx >= cmdHistory.length) {
+        setHistoryIdx(-1);
+        setInput('');
+      } else {
+        setHistoryIdx(newIdx);
+        setInput(cmdHistory[newIdx]);
+      }
+    }
+    // Ctrl+L — clear
+    if (e.key === 'l' && e.ctrlKey) {
+      e.preventDefault();
+      setHistory([]);
+    }
+    // Ctrl+C — clear input
+    if (e.key === 'c' && e.ctrlKey && !window.getSelection().toString()) {
+      e.preventDefault();
+      setInput('');
+      if (running) {
+        setHistory(prev => [...prev, { type: 'err', text: '^C' }]);
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full font-mono text-[12px]" onClick={() => inputRef.current?.focus()}>
+      {/* Output area */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin pb-2 min-h-0">
+        {history.length === 0 && (
+          <div className="text-slate-600 py-4 text-center text-[11px]">
+            <p>Terminal — runs in your project directory</p>
+            <p className="mt-1 text-slate-700">Type a command and press Enter. ↑↓ for history, Ctrl+L to clear.</p>
+          </div>
+        )}
+        {history.map((entry, i) => (
+          <div key={i} className={`px-2 py-0.5 whitespace-pre-wrap break-all ${
+            entry.type === 'cmd' ? 'text-brand-400' :
+            entry.type === 'err' ? 'text-red-400/80' :
+            'text-slate-400'
+          }`}>
+            {entry.type === 'cmd' ? (
+              <span><span className="text-green-500/70">$ </span>{entry.text}</span>
+            ) : (
+              entry.text
+            )}
+          </div>
+        ))}
+        {running && (
+          <div className="px-2 py-0.5 text-amber-400/60 animate-pulse">running...</div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input line */}
+      <div className="flex items-center gap-1 border-t border-slate-800 pt-1.5 shrink-0">
+        <span className="text-green-500/70 text-[12px] pl-1">$</span>
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={running}
+          placeholder={running ? 'running...' : 'Type a command...'}
+          className="flex-1 bg-transparent border-none outline-none text-slate-200 placeholder:text-slate-600 text-[12px] font-mono"
+          autoComplete="off"
+          spellCheck="false"
+        />
+      </div>
+    </div>
+  );
+});
+
+/* ================================================================
+   Memory Panel — cross-session knowledge management
+   ================================================================ */
+function MemoryPanel({ memories, stats, types, scopes, onAdd, onDelete, onRefresh }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [content, setContent] = useState('');
+  const [memType, setMemType] = useState('context');
+  const [memScope, setMemScope] = useState('project');
+  const [tags, setTags] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterScope, setFilterScope] = useState('');
+  const [search, setSearch] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!content.trim()) return;
+    onAdd({
+      content: content.trim(),
+      type: memType,
+      scope: memScope,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      created_by: 'user',
+    });
+    setContent('');
+    setTags('');
+    setShowAdd(false);
+  };
+
+  const filtered = (memories || []).filter(m => {
+    if (filterType && m.type !== filterType) return false;
+    if (filterScope && m.scope !== filterScope) return false;
+    if (search && !m.content.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const typeColors = {
+    decision: 'bg-blue-500/20 text-blue-300',
+    learning: 'bg-green-500/20 text-green-300',
+    preference: 'bg-purple-500/20 text-purple-300',
+    blocker: 'bg-red-500/20 text-red-300',
+    context: 'bg-slate-500/20 text-slate-300',
+    pattern: 'bg-amber-500/20 text-amber-300',
+  };
+  const scopeColors = {
+    project: 'bg-cyan-500/15 text-cyan-400',
+    auth: 'bg-red-500/15 text-red-400',
+    api: 'bg-blue-500/15 text-blue-400',
+    ui: 'bg-purple-500/15 text-purple-400',
+    testing: 'bg-green-500/15 text-green-400',
+    deployment: 'bg-orange-500/15 text-orange-400',
+    database: 'bg-yellow-500/15 text-yellow-400',
+    security: 'bg-pink-500/15 text-pink-400',
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Header bar with stats and actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">{stats?.total || 0} memories</span>
+          {stats?.by_type && Object.entries(stats.by_type).map(([t, c]) => (
+            <span key={t} className={`text-[10px] px-1.5 py-0.5 rounded-full ${typeColors[t] || 'bg-slate-700 text-slate-400'}`}>
+              {t}: {c}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={onRefresh} className="p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors" title="Refresh">
+            <Icon name="refresh-cw" size={12} />
+          </button>
+          <button
+            onClick={() => setShowAdd(prev => !prev)}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded-md transition-colors"
+          >
+            <Icon name="plus" size={10} />
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* Add memory form */}
+      {showAdd && (
+        <form onSubmit={handleSubmit} className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 space-y-2">
+          <textarea
+            value={content}
+            onChange={e => setContent(e.target.value)}
+            placeholder="What should agents remember across sessions?"
+            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 placeholder-slate-500 resize-none focus:outline-none focus:border-brand-500"
+            rows={2}
+          />
+          <div className="flex gap-2">
+            <select value={memType} onChange={e => setMemType(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300">
+              {(types || ['context','decision','learning','pattern','preference','blocker']).map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <select value={memScope} onChange={e => setMemScope(e.target.value)}
+              className="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300">
+              {(scopes || ['project','api','auth','database','deployment','security','testing','ui']).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <input
+            value={tags}
+            onChange={e => setTags(e.target.value)}
+            placeholder="Tags (comma-separated)"
+            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none focus:border-brand-500"
+          />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowAdd(false)} className="px-2 py-1 text-[10px] text-slate-400 hover:text-slate-200">Cancel</button>
+            <button type="submit" className="px-3 py-1 text-[10px] font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded transition-colors">Save Memory</button>
+          </div>
+        </form>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-2">
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search memories..."
+          className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 placeholder-slate-500 focus:outline-none focus:border-brand-500"
+        />
+        <select value={filterType} onChange={e => setFilterType(e.target.value)}
+          className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-400">
+          <option value="">All types</option>
+          {(types || []).map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterScope} onChange={e => setFilterScope(e.target.value)}
+          className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-400">
+          <option value="">All scopes</option>
+          {(scopes || []).map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      {/* Memory list */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-8">
+          <Icon name="brain" size={24} className="text-slate-700 mx-auto mb-2" />
+          <p className="text-xs text-slate-500">No memories yet.</p>
+          <p className="text-[10px] text-slate-600 mt-1">Agents learn and remember decisions, patterns, and preferences across sessions.</p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {filtered.map(m => (
+            <div key={m.id} className="group bg-slate-800/40 hover:bg-slate-800/70 border border-slate-800 rounded-lg px-3 py-2 transition-colors">
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-300 leading-relaxed">{m.content}</p>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${typeColors[m.type] || 'bg-slate-700 text-slate-400'}`}>
+                      {m.type}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${scopeColors[m.scope] || 'bg-slate-700/50 text-slate-500'}`}>
+                      {m.scope}
+                    </span>
+                    {(m.tags || []).map(tag => (
+                      <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-slate-700/50 text-slate-500">#{tag}</span>
+                    ))}
+                    <span className="text-[9px] text-slate-600 ml-auto">{m.created_by || 'system'}</span>
+                    <span className="text-[9px] text-slate-600">{new Date(m.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onDelete(m.id)}
+                  className="p-1 rounded text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Forget"
+                >
+                  <Icon name="x" size={10} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   Section Wrapper
+   ================================================================ */
+function Section({ title, icon, children, className = '', collapsible = false, defaultOpen = true, badge, stretch = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className={`bg-slate-900 border border-slate-800 rounded-xl overflow-hidden ${stretch ? 'flex flex-col' : ''} ${className}`}>
+      <div
+        className={`px-4 py-2.5 border-b border-slate-800 flex items-center gap-2 shrink-0 ${collapsible ? 'cursor-pointer select-none hover:bg-slate-800/50 transition-colors' : ''}`}
+        onClick={collapsible ? () => setOpen(prev => !prev) : undefined}
+      >
+        <Icon name={icon} size={15} className="text-slate-500" />
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</h2>
+        {badge !== undefined && (
+          <span className="ml-1 text-[10px] font-medium text-slate-500 bg-slate-800 rounded-full px-1.5 py-0.5">{badge}</span>
+        )}
+        {collapsible && (
+          <Icon
+            name={open ? 'chevronUp' : 'chevronDown'}
+            size={14}
+            className="ml-auto text-slate-500 transition-transform"
+          />
+        )}
+      </div>
+      {(!collapsible || open) && (
+        <div className={`p-4 ${stretch ? 'flex-1 flex flex-col min-h-0' : ''}`}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   Setup Wizard
+   ================================================================ */
+const SETTINGS_TABS = ['llm', 'infra', 'integrations', 'figma', 'whatsapp'];
+const SETTINGS_TAB_LABELS = { llm: 'LLM Providers', infra: 'Infrastructure', integrations: 'Integrations', figma: 'Figma Tokens', whatsapp: 'WhatsApp' };
+const SETTINGS_TAB_ICONS = {
+  llm: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  infra: '<rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>',
+  integrations: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  figma: '<path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z"/><path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z"/><path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z"/><path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z"/><path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z"/>',
+  whatsapp: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+};
+
+function SettingsModal({ onClose, isFirstRun }) {
+  const [activeTab, setActiveTab] = useState('llm');
+  const [providers, setProviders] = useState({});
+  const [infra, setInfra] = useState({});
+  const [keys, setKeys] = useState({});
+  const [testing, setTesting] = useState({});
+  const [testResults, setTestResults] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Figma tokens state
+  const [figmaFileKey, setFigmaFileKey] = useState('');
+  const [figmaNodeId, setFigmaNodeId] = useState('');
+  const [figmaFormat, setFigmaFormat] = useState('css');
+  const [figmaTokens, setFigmaTokens] = useState(null);
+  const [figmaOutput, setFigmaOutput] = useState('');
+  const [figmaLoading, setFigmaLoading] = useState(false);
+  const [figmaSaveStatus, setFigmaSaveStatus] = useState(null);
+
+  const parseFigmaUrl = (url) => {
+    const m = url.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)(?:\/[^?#]*)?(?:\?.*?node-id=([^&#]+))?/i);
+    if (m) {
+      setFigmaFileKey(m[1]);
+      if (m[2]) setFigmaNodeId(m[2]);
+    }
+  };
+
+  const handleExtractTokens = async () => {
+    if (!figmaFileKey) return;
+    setFigmaLoading(true);
+    setFigmaTokens(null);
+    setFigmaOutput('');
+    try {
+      const res = await api('/figma/tokens', {
+        method: 'POST',
+        body: JSON.stringify({ file_key: figmaFileKey, node_id: figmaNodeId || undefined, format: figmaFormat }),
+      });
+      setFigmaTokens(res.tokens || null);
+      setFigmaOutput(res.content || JSON.stringify(res.tokens, null, 2));
+    } catch (err) {
+      setFigmaOutput('Error: ' + err.message);
+    }
+    setFigmaLoading(false);
+  };
+
+  const handleSaveTokens = async () => {
+    if (!figmaFileKey) return;
+    setFigmaSaveStatus('saving');
+    try {
+      const res = await api('/figma/tokens/save', {
+        method: 'POST',
+        body: JSON.stringify({ file_key: figmaFileKey, node_id: figmaNodeId || undefined, format: figmaFormat }),
+      });
+      setFigmaSaveStatus(`Saved to ${res.relative}`);
+      setTimeout(() => setFigmaSaveStatus(null), 4000);
+    } catch (err) {
+      setFigmaSaveStatus('Error: ' + err.message);
+      setTimeout(() => setFigmaSaveStatus(null), 4000);
+    }
+  };
+
+  useEffect(() => {
+    api('/api/setup/status').then(d => setProviders(d.providers || {})).catch(() => {});
+    api('/api/setup/infra').then(d => setInfra(d.services || {})).catch(() => {});
+  }, []);
+
+  const setKey = (id, val) => setKeys(prev => ({ ...prev, [id]: val }));
+
+  const testProvider = async (id) => {
+    setTesting(prev => ({ ...prev, [id]: true }));
+    try {
+      const res = await api('/api/setup/test', {
+        method: 'POST',
+        body: JSON.stringify({ provider: id, key: keys[id] || '' }),
+      });
+      setTestResults(prev => ({ ...prev, [id]: res }));
+    } catch {
+      setTestResults(prev => ({ ...prev, [id]: { status: 'error', message: 'Test failed' } }));
+    }
+    setTesting(prev => ({ ...prev, [id]: false }));
+  };
+
+  const saveKeys = async () => {
+    setSaving(true);
+    try {
+      const toSave = {};
+      Object.entries(keys).forEach(([k, v]) => { if (v.trim()) toSave[k] = v.trim(); });
+      if (Object.keys(toSave).length > 0) {
+        await api('/api/setup/save', { method: 'POST', body: JSON.stringify({ keys: toSave }) });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) { console.error('Save failed:', e); }
+    setSaving(false);
+  };
+
+  const handleDone = async () => {
+    await saveKeys();
+    try { localStorage.setItem('agentarmy_setup_done', '1'); } catch(e) {}
+    onClose();
+  };
+
+  const testBadge = (id) => {
+    const r = testResults[id];
+    if (!r) return null;
+    const colors = { ok: 'bg-emerald-500/20 text-emerald-400', invalid_key: 'bg-red-500/20 text-red-400', error: 'bg-red-500/20 text-red-400', no_key: 'bg-slate-700 text-slate-400' };
+    return <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${colors[r.status] || colors.error}`}>{r.message}</span>;
+  };
+
+  const KeyInput = ({ id, label, placeholder, required }) => {
+    const p = providers[id] || {};
+    const val = keys[id] !== undefined ? keys[id] : '';
+    return (
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-sm font-medium text-slate-300">
+            {label} {required && <span className="text-red-400">*</span>}
+          </label>
+          <div className="flex items-center gap-2">
+            {testBadge(id)}
+            {p.is_set && !keys[id] && <span className="text-[10px] text-emerald-400/70">configured</span>}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={val}
+            onChange={e => setKey(id, e.target.value)}
+            placeholder={p.is_set ? '••• (already set — leave blank to keep)' : placeholder}
+            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono
+                       placeholder:text-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20"
+          />
+          <button
+            onClick={() => testProvider(id)}
+            disabled={testing[id]}
+            className="bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg px-3 py-2 text-xs font-medium transition-colors disabled:opacity-40"
+          >
+            {testing[id] ? '...' : 'Test'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const [startingService, setStartingService] = useState({});
+
+  const startService = async (serviceName) => {
+    setStartingService(prev => ({ ...prev, [serviceName]: true }));
+    try {
+      const res = await api('/api/setup/infra/start', {
+        method: 'POST',
+        body: JSON.stringify({ service: serviceName }),
+      });
+      if (res.ok) {
+        // Refresh infra status
+        const d = await api('/api/setup/infra');
+        setInfra(d.services || {});
+      } else {
+        alert(res.error || 'Failed to start service');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to start service');
+    } finally {
+      setStartingService(prev => ({ ...prev, [serviceName]: false }));
+    }
+  };
+
+  const InfraRow = ({ name, label, optional, startable }) => {
+    const s = infra[name] || {};
+    const ok = s.status === 'running';
+    const starting = startingService[name];
+    return (
+      <div className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${ok ? 'bg-emerald-400' : starting ? 'bg-amber-400 animate-pulse' : (optional ? 'bg-slate-500' : 'bg-red-500')}`} />
+          <span className="text-sm text-slate-300">{label}</span>
+          {optional && <span className="text-[10px] text-slate-600 font-medium">(optional)</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          {!ok && startable && (
+            <button
+              onClick={() => startService(name)}
+              disabled={starting}
+              className="px-2 py-0.5 text-[10px] font-semibold rounded bg-brand-600 hover:bg-brand-500 text-white transition-colors disabled:opacity-50"
+            >
+              {starting ? 'Starting...' : 'Start'}
+            </button>
+          )}
+          <span className={`text-xs font-mono ${ok ? 'text-emerald-400' : (optional ? 'text-slate-500' : 'text-red-400')}`}>
+            {ok ? `port ${s.port}` : starting ? 'starting...' : 'not running'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget && !isFirstRun) onClose(); }}>
+      <div className="w-full max-w-2xl max-h-[85vh] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center">
+              <Icon name="settings" size={16} className="text-brand-400" />
+            </div>
+            <h2 className="text-lg font-semibold">Settings</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors"
+            title="Close settings"
+          >
+            <Icon name="x" size={14} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* Body with sidebar tabs */}
+        <div className="flex flex-1 min-h-0">
+          {/* Tab sidebar */}
+          <div className="w-48 shrink-0 border-r border-slate-800 py-2 bg-slate-900/50">
+            {SETTINGS_TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left transition-colors ${
+                  activeTab === tab
+                    ? 'bg-slate-800 text-white border-r-2 border-brand-500'
+                    : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: SETTINGS_TAB_ICONS[tab] }} />
+                {SETTINGS_TAB_LABELS[tab]}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
+            {activeTab === 'llm' && (
+              <div>
+                <h3 className="text-base font-semibold mb-1">LLM Providers</h3>
+                <p className="text-xs text-slate-500 mb-4">Configure at least one provider. If none are set, Ollama (local) will be used as fallback.</p>
+                <KeyInput id="claude" label="Claude (Anthropic)" placeholder="sk-ant-api03-..." />
+                <KeyInput id="openai" label="OpenAI" placeholder="sk-..." />
+                <KeyInput id="gemini" label="Google Gemini" placeholder="AIza..." />
+                <KeyInput id="kimi" label="Kimi (Moonshot)" placeholder="sk-..." />
+                <KeyInput id="huggingface" label="Hugging Face" placeholder="hf_..." />
+              </div>
+            )}
+
+            {activeTab === 'infra' && (
+              <div>
+                <h3 className="text-base font-semibold mb-1">Infrastructure</h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Only PostgreSQL is required. Redis and Neo4j fall back to in-memory storage automatically.
+                  Run <code className="text-brand-400">make infra-up</code> to start services.
+                </p>
+                <div className="bg-slate-800/50 rounded-xl p-3 mb-3">
+                  <InfraRow name="postgresql" label="PostgreSQL" />
+                  <InfraRow name="redis" label="Redis" optional startable />
+                  <InfraRow name="rabbitmq" label="RabbitMQ" optional startable />
+                  <InfraRow name="neo4j" label="Neo4j" optional startable />
+                  <InfraRow name="ollama" label="Ollama (local LLM)" optional startable />
+                </div>
+                <button
+                  onClick={() => api('/api/setup/infra').then(d => setInfra(d.services || {})).catch(() => {})}
+                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1"
+                >
+                  <Icon name="refresh-cw" size={10} /> Refresh status
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'integrations' && (
+              <div>
+                <h3 className="text-base font-semibold mb-1">Integrations</h3>
+                <p className="text-xs text-slate-500 mb-4">Connect Jira, Figma, and GitHub — paste URLs in chat to pull in context automatically.</p>
+
+                <div className="mb-5 pb-4 border-b border-slate-800">
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg>
+                    Jira
+                  </h4>
+                  <KeyInput id="jira_email" label="Jira Email" placeholder="you@company.com" />
+                  <KeyInput id="jira_token" label="Jira API Token" placeholder="ATATT3x..." />
+                  <KeyInput id="jira_domain" label="Jira Domain" placeholder="mycompany (for mycompany.atlassian.net)" />
+                </div>
+
+                <div className="mb-5 pb-4 border-b border-slate-800">
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                    Figma
+                  </h4>
+                  <KeyInput id="figma_token" label="Figma Access Token" placeholder="figd_..." />
+                  <p className="text-[10px] text-slate-600 mt-1">Generate at figma.com → Settings → Personal access tokens</p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" strokeWidth="2"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                    GitHub
+                  </h4>
+                  <KeyInput id="github_token" label="GitHub Token" placeholder="ghp_..." />
+                  <p className="text-[10px] text-slate-600 mt-1">Used for cloning boilerplate repos and creating apps from templates</p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'figma' && (
+              <div>
+                <h3 className="text-base font-semibold mb-1">Figma Design Tokens</h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Extract colors, typography, spacing, shadows, and border radii from any Figma file. Paste a Figma URL or enter a file key.
+                </p>
+
+                {/* URL input */}
+                <div className="mb-3">
+                  <label className="text-sm font-medium text-slate-300 mb-1 block">Figma URL or File Key</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={figmaFileKey}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v.includes('figma.com')) parseFigmaUrl(v);
+                        else setFigmaFileKey(v);
+                      }}
+                      placeholder="https://www.figma.com/design/abc123/... or just abc123"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Optional node ID */}
+                <div className="mb-3">
+                  <label className="text-sm font-medium text-slate-300 mb-1 block">Node ID <span className="text-slate-600 font-normal">(optional — scope to a specific frame)</span></label>
+                  <input
+                    value={figmaNodeId}
+                    onChange={e => setFigmaNodeId(e.target.value)}
+                    placeholder="e.g. 1:23"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono placeholder:text-slate-600 focus:outline-none focus:border-brand-500/50"
+                  />
+                </div>
+
+                {/* Format selector + actions */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs text-slate-400">Format:</label>
+                    {['css', 'tailwind', 'json'].map(fmt => (
+                      <button
+                        key={fmt}
+                        onClick={() => setFigmaFormat(fmt)}
+                        className={`text-[11px] px-2.5 py-1 rounded-md font-medium transition-colors ${
+                          figmaFormat === fmt
+                            ? 'bg-brand-500/20 text-brand-400 border border-brand-500/40'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700 hover:text-slate-300'
+                        }`}
+                      >
+                        {fmt === 'css' ? 'CSS' : fmt === 'tailwind' ? 'Tailwind' : 'JSON'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={handleExtractTokens}
+                    disabled={!figmaFileKey || figmaLoading}
+                    className="bg-brand-600 hover:bg-brand-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {figmaLoading ? (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Extracting...</>
+                    ) : (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Extract</>
+                    )}
+                  </button>
+
+                  {figmaTokens && (
+                    <button
+                      onClick={handleSaveTokens}
+                      className="bg-emerald-600/80 hover:bg-emerald-500 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      Save to Project
+                    </button>
+                  )}
+
+                  {figmaSaveStatus && (
+                    <span className={`text-[10px] ${figmaSaveStatus.startsWith('Error') ? 'text-red-400' : figmaSaveStatus === 'saving' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {figmaSaveStatus}
+                    </span>
+                  )}
+                </div>
+
+                {/* Token summary cards */}
+                {figmaTokens && (
+                  <div className="grid grid-cols-5 gap-2 mb-4">
+                    {[
+                      { label: 'Colors', count: Object.keys(figmaTokens.colors || {}).length, color: 'bg-pink-500/20 text-pink-400' },
+                      { label: 'Typography', count: Object.keys(figmaTokens.typography || {}).length, color: 'bg-blue-500/20 text-blue-400' },
+                      { label: 'Shadows', count: (figmaTokens.effects || []).length, color: 'bg-purple-500/20 text-purple-400' },
+                      { label: 'Radii', count: (figmaTokens.radii || []).length, color: 'bg-amber-500/20 text-amber-400' },
+                      { label: 'Spacing', count: (figmaTokens.spacing || []).length, color: 'bg-emerald-500/20 text-emerald-400' },
+                    ].map(s => (
+                      <div key={s.label} className={`${s.color} rounded-lg px-2.5 py-2 text-center`}>
+                        <div className="text-lg font-bold">{s.count}</div>
+                        <div className="text-[10px] opacity-70">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Color swatches */}
+                {figmaTokens && Object.keys(figmaTokens.colors || {}).length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Colors</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(figmaTokens.colors).sort((a,b) => b[1].usage_count - a[1].usage_count).slice(0, 30).map(([name, c]) => (
+                        <div key={name} className="group relative">
+                          <div
+                            className="w-8 h-8 rounded-md border border-slate-700 cursor-pointer hover:scale-110 transition-transform"
+                            style={{ backgroundColor: c.hex }}
+                            title={`${c.style_name || name}\n${c.hex}\nUsed ${c.usage_count}x`}
+                          />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[9px] text-slate-300 whitespace-nowrap z-10 shadow-lg">
+                            <div className="font-medium">{c.style_name || name}</div>
+                            <div className="font-mono text-slate-500">{c.hex}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Typography preview */}
+                {figmaTokens && Object.keys(figmaTokens.typography || {}).length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Typography</h4>
+                    <div className="space-y-1.5">
+                      {Object.entries(figmaTokens.typography).sort((a,b) => (b[1].font_size || 0) - (a[1].font_size || 0)).slice(0, 8).map(([name, t]) => (
+                        <div key={name} className="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-1.5">
+                          <span
+                            className="text-slate-200 truncate max-w-[60%]"
+                            style={{ fontFamily: t.font_family, fontSize: Math.min(t.font_size || 14, 22), fontWeight: t.font_weight || 400 }}
+                          >
+                            {t.style_name || name}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono shrink-0 ml-2">
+                            {t.font_family} / {t.font_size}px / {t.font_weight}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Generated output */}
+                {figmaOutput && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        Generated {figmaFormat === 'css' ? 'CSS' : figmaFormat === 'tailwind' ? 'Tailwind Config' : 'JSON'}
+                      </h4>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(figmaOutput); }}
+                        className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="bg-[#0d1117] border border-slate-800 rounded-lg p-3 text-[11px] leading-[1.4] font-mono text-slate-400 overflow-x-auto max-h-60 overflow-y-auto scrollbar-thin whitespace-pre-wrap">
+                      {figmaOutput}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'whatsapp' && (
+              <div>
+                <h3 className="text-base font-semibold mb-1">WhatsApp</h3>
+                <p className="text-xs text-slate-500 mb-4">Optional — only needed if you want to control agents via WhatsApp messages.</p>
+                <KeyInput id="whatsapp_token" label="API Token" placeholder="EAA..." />
+                <KeyInput id="whatsapp_phone" label="Phone Number ID" placeholder="1234567890" />
+                <KeyInput id="whatsapp_verify" label="Verify Token" placeholder="any random string" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-3 border-t border-slate-800 bg-slate-900/80 shrink-0">
+          <div className="text-[10px] text-slate-600">Keys are saved in your .env file</div>
+          <div className="flex items-center gap-2">
+            {saved && <span className="text-[10px] text-emerald-400 animate-pulse">Saved!</span>}
+            <button
+              onClick={saveKeys}
+              disabled={saving}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={handleDone}
+              disabled={saving}
+              className="bg-brand-600 hover:bg-brand-500 text-white rounded-lg px-4 py-1.5 text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   App
+   ================================================================ */
+function App() {
+  const [health, setHealth] = useState(null);
+  const [agents, setAgents] = useState({});
+  const [connected, setConnected] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatAgent, setChatAgent] = useState(null);
+  const [chatAgents, setChatAgents] = useState([]);  // multi-agent list
+  const [showSetup, setShowSetup] = useState(null); // null = loading, true/false
+  const [showSettings, setShowSettings] = useState(false);
+  const [projectDir, setProjectDir] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [activeConvId, setActiveConvId] = useState(null);
+  const pollRef = useRef(null);
+  const chatQueueRef = useRef([]);
+  const chatProcessingRef = useRef(false);
+  const [chatQueueCount, setChatQueueCount] = useState(0);
+  const [leftTab, setLeftTab] = useState('tasks');
+  const terminalRef = useRef(null);
+  const [memories, setMemories] = useState([]);
+  const [memoryStats, setMemoryStats] = useState({ total: 0, by_type: {}, by_scope: {} });
+  const [clusterWorkers, setClusterWorkers] = useState([]);
+  const [clusterHealth, setClusterHealth] = useState(null);
+  const [clusterMode, setClusterMode] = useState('standalone');
+  const [memoryTypes, setMemoryTypes] = useState([]);
+  const [memoryScopes, setMemoryScopes] = useState([]);
+
+  // ── check if setup is needed (only show welcome on first run) ────
+  useEffect(() => {
+    const setupDone = (() => { try { return localStorage.getItem('agentarmy_setup_done') === '1'; } catch(e) { return false; } })();
+    if (setupDone) {
+      setShowSetup(false);
+      return;
+    }
+    api('/api/setup/status')
+      .then(d => setShowSetup(!d.configured))
+      .catch(() => setShowSetup(false));
+  }, []);
+
+  // ── load project directory on mount ────────────────────────────
+  useEffect(() => {
+    api('/api/setup/project').then(setProjectDir).catch(() => {});
+  }, []);
+
+  // ── load conversations & tasks on mount ────────────────────────
+  useEffect(() => {
+    // Load conversations from server
+    api('/conversations').then(async data => {
+      const convs = data.conversations || [];
+      setConversations(convs);
+      const activeId = data.active_id;
+      if (activeId && convs.find(c => c.id === activeId)) {
+        // Restore active conversation and its messages
+        setActiveConvId(activeId);
+        try {
+          const conv = await api(`/conversations/${activeId}`);
+          setChatMessages(conv.messages || []);
+        } catch {}
+      } else if (convs.length === 0) {
+        // First launch — create initial conversation
+        try {
+          const conv = await api('/conversations', { method: 'POST', body: JSON.stringify({ title: 'New Chat' }) });
+          setConversations([conv]);
+          setActiveConvId(conv.id);
+        } catch {}
+      } else {
+        // Pick the most recent conversation
+        const latest = convs[convs.length - 1];
+        setActiveConvId(latest.id);
+        try {
+          const conv = await api(`/conversations/${latest.id}`);
+          setChatMessages(conv.messages || []);
+        } catch {}
+      }
+    }).catch(() => {});
+  }, []);
+
+  // ── polling ─────────────────────────────────────────────────────
+  const poll = useCallback(async () => {
+    try {
+      const [h, a, t] = await Promise.all([api('/health'), api('/agents'), api('/tasks')]);
+      setHealth(h);
+      setAgents(a.agents || {});
+      if (t.tasks && t.tasks.length > 0) {
+        setTasks(prev => {
+          const serverMap = new Map(t.tasks.map(st => [st.task_id, st]));
+          const localIds = new Set(prev.map(lt => lt.task_id).filter(Boolean));
+          const merged = prev.map(lt => {
+            if (lt.task_id && serverMap.has(lt.task_id)) {
+              const st = serverMap.get(lt.task_id);
+              return { ...lt, status: st.status, assigned_agent: st.assigned_agent, error: st.error, result: st.result || lt.result };
+            }
+            return lt;
+          });
+          for (const st of t.tasks) {
+            if (!localIds.has(st.task_id)) merged.unshift(st);
+          }
+          return merged;
+        });
+      }
+      setConnected(true);
+
+      // Fetch cluster workers (non-blocking — only relevant in center mode)
+      try {
+        const cw = await api('/api/cluster/workers?include_offline=true');
+        setClusterMode(cw.mode || 'standalone');
+        setClusterWorkers(cw.workers || []);
+        setClusterHealth(cw.health || null);
+      } catch {}
+    } catch {
+      setConnected(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showSetup === false) {
+      poll();
+      pollRef.current = setInterval(poll, 5000);
+      return () => clearInterval(pollRef.current);
+    }
+  }, [poll, showSetup]);
+
+  // ── conversation management ─────────────────────────────────────
+  const handleNewConversation = async () => {
+    try {
+      const conv = await api('/conversations', { method: 'POST', body: JSON.stringify({ title: 'New Chat' }) });
+      setConversations(prev => [...prev, conv]);
+      setActiveConvId(conv.id);
+      setChatMessages([]);
+    } catch {}
+  };
+
+  const handleSelectConversation = async (convId) => {
+    if (convId === activeConvId) return;
+    setActiveConvId(convId);
+    setChatMessages([]); // Clear while loading
+    try {
+      await api(`/conversations/${convId}/active`, { method: 'POST', body: JSON.stringify({}) });
+      const conv = await api(`/conversations/${convId}`);
+      setChatMessages(conv.messages || []);
+    } catch {}
+  };
+
+  const handleDeleteConversation = async (convId) => {
+    try {
+      await api(`/conversations/${convId}`, { method: 'DELETE' });
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (convId === activeConvId) {
+        // Switch to another conversation or create new one
+        const remaining = conversations.filter(c => c.id !== convId);
+        if (remaining.length > 0) {
+          handleSelectConversation(remaining[remaining.length - 1].id);
+        } else {
+          handleNewConversation();
+        }
+      }
+    } catch {}
+  };
+
+  // ── task submission ─────────────────────────────────────────────
+  const handleSubmitTask = async (desc, priority) => {
+    try {
+      const res = await api('/tasks', {
+        method: 'POST',
+        body: JSON.stringify({ description: desc, priority, tags: ['dashboard'] }),
+      });
+      setTasks(prev => [{ ...res, description: desc, priority }, ...prev]);
+    } catch (err) {
+      setTasks(prev => [{ description: desc, priority, status: 'failed', error: err.message }, ...prev]);
+    }
+  };
+
+  // ── task deletion ──────────────────────────────────────────────
+  const handleDeleteTask = async (taskId, index) => {
+    setTasks(prev => prev.filter((_, i) => i !== index));
+    if (taskId) {
+      try { await api(`/tasks/${taskId}`, { method: 'DELETE' }); } catch {}
+    }
+  };
+
+  // ── memory management ────────────────────────────────────────────
+  const fetchMemories = useCallback(async () => {
+    try {
+      const data = await api('/memory');
+      setMemories(data.memories || []);
+      setMemoryStats(data.stats || { total: 0, by_type: {}, by_scope: {} });
+      if (data.types) setMemoryTypes(data.types);
+      if (data.scopes) setMemoryScopes(data.scopes);
+    } catch {}
+  }, []);
+
+  // Load memories when switching to memory tab
+  useEffect(() => {
+    if (leftTab === 'memory') fetchMemories();
+  }, [leftTab, fetchMemories]);
+
+  const handleAddMemory = async (payload) => {
+    try {
+      const data = await api('/memory', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      setMemories(prev => [data.memory, ...prev]);
+      if (data.stats) setMemoryStats(data.stats);
+    } catch (err) {
+      console.error('Failed to add memory', err);
+    }
+  };
+
+  const handleDeleteMemory = async (entryId) => {
+    try {
+      const data = await api(`/memory/${entryId}`, { method: 'DELETE' });
+      setMemories(prev => prev.filter(m => m.id !== entryId));
+      if (data.stats) setMemoryStats(data.stats);
+    } catch (err) {
+      console.error('Failed to delete memory', err);
+    }
+  };
+
+  // ── chat (with message queue) ────────────────────────────────────
+  const processNextInQueue = useCallback(async () => {
+    if (chatProcessingRef.current) return;
+    if (chatQueueRef.current.length === 0) return;
+
+    chatProcessingRef.current = true;
+    const { text, model } = chatQueueRef.current.shift();
+    setChatQueueCount(chatQueueRef.current.length);
+
+    // Auto-create a conversation if none active
+    let convId = activeConvId;
+    if (!convId) {
+      try {
+        const conv = await api('/conversations', { method: 'POST', body: JSON.stringify({ title: 'New Chat' }) });
+        setConversations(prev => [...prev, conv]);
+        setActiveConvId(conv.id);
+        convId = conv.id;
+      } catch {}
+    }
+
+    const predicted = predictAgents(text);
+    setChatAgent(predicted[0] || predictAgent(text));
+    setChatAgents(predicted);
+    setChatLoading(true);
+    try {
+      const payload = { message: text, conversation_id: convId };
+      if (model && model !== 'auto') payload.model = model;
+      const res = await api('/chat', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (res.cancelled) {
+        // Don't add a response bubble for cancelled requests
+      } else if (res.agent_id === 'multi-agent' && res.responses) {
+        // Multi-agent parallel response
+        const reply = res.response || res.message || 'Multi-agent response';
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          agent: 'multi-agent',
+          agents: (res.responses || []).map(r => r.agent_id),
+          text: reply,
+          responses: res.responses,
+        }]);
+      } else {
+        const reply = res.response || res.message || `Task submitted: ${res.task_id || 'ok'}`;
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          agent: res.agent_id || res.assigned_agent || 'system',
+          text: reply,
+        }]);
+      }
+      // Refresh conversation list to update titles/counts
+      api('/conversations').then(d => setConversations(d.conversations || [])).catch(() => {});
+    } catch (err) {
+      if (!err.message?.includes('aborted') && !err.message?.includes('cancel')) {
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          agent: 'system',
+          text: `Error: ${err.message}`,
+        }]);
+      }
+    } finally {
+      setChatLoading(false);
+      setChatAgent(null);
+      setChatAgents([]);
+      chatProcessingRef.current = false;
+      // Process next queued message if any
+      if (chatQueueRef.current.length > 0) {
+        // Small delay so the UI can breathe between messages
+        setTimeout(() => processNextInQueue(), 300);
+      }
+    }
+  }, [activeConvId]);
+
+  const handleChat = (text, model) => {
+    // ── /imagine command — generate image via Gemini Nano Banana ──
+    const imagineMatch = text.match(/^\/imagine\s+(.+)/i);
+    if (imagineMatch) {
+      const prompt = imagineMatch[1].trim();
+      // Parse optional aspect ratio: /imagine 16:9 a cat
+      let aspect = '1:1';
+      let cleanPrompt = prompt;
+      const ratioMatch = prompt.match(/^(1:1|3:4|4:3|9:16|16:9)\s+(.+)/);
+      if (ratioMatch) { aspect = ratioMatch[1]; cleanPrompt = ratioMatch[2]; }
+
+      const userMsg = { role: 'user', text };
+      setChatMessages(prev => [...prev, userMsg]);
+      setChatLoading(true);
+      setChatAgent('scout');
+
+      api('/api/generate-image', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: cleanPrompt, aspect_ratio: aspect }),
+      }).then(res => {
+        let reply;
+        if (res.success) {
+          reply = {
+            role: 'assistant',
+            agent: 'scout',
+            text: `![${cleanPrompt}](${res.url})\n\n*Generated with Gemini Nano Banana*${res.text ? '\n\n' + res.text : ''}`,
+          };
+        } else {
+          reply = {
+            role: 'assistant',
+            agent: 'scout',
+            text: `Image generation failed: ${res.error || 'Unknown error'}`,
+          };
+        }
+        setChatMessages(prev => [...prev, reply]);
+      }).catch(err => {
+        setChatMessages(prev => [...prev, {
+          role: 'assistant',
+          agent: 'system',
+          text: `Image generation error: ${err.message || 'Request failed'}`,
+        }]);
+      }).finally(() => {
+        setChatLoading(false);
+        setChatAgent(null);
+      });
+      return;
+    }
+
+    // Detect Jira/Figma URLs in the message
+    const detectedUrls = detectUrls(text);
+
+    // Immediately show the user message with loading URL cards
+    const userMsg = { role: 'user', text };
+    if (detectedUrls.length > 0) {
+      userMsg.urlCards = detectedUrls.map(u => ({ source: u.source, loading: true, data: null }));
+    }
+    setChatMessages(prev => [...prev, userMsg]);
+
+    // Resolve URLs in the background (non-blocking for the chat queue)
+    if (detectedUrls.length > 0) {
+      api('/resolve-urls', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      }).then(res => {
+        if (res.resolved && res.resolved.length > 0) {
+          setChatMessages(prev => prev.map(m => {
+            if (m === userMsg || (m.role === 'user' && m.text === text && m.urlCards)) {
+              return {
+                ...m,
+                urlCards: res.resolved.map(r => ({
+                  source: r.source,
+                  loading: false,
+                  data: r.data,
+                })),
+              };
+            }
+            return m;
+          }));
+        }
+      }).catch(() => {
+        // Remove loading state on failure
+        setChatMessages(prev => prev.map(m => {
+          if (m.role === 'user' && m.text === text && m.urlCards) {
+            return { ...m, urlCards: m.urlCards.map(c => ({ ...c, loading: false, data: { error: 'Failed to resolve URL' } })) };
+          }
+          return m;
+        }));
+      });
+    }
+
+    // Queue the request
+    chatQueueRef.current.push({ text, model });
+    setChatQueueCount(chatQueueRef.current.length);
+    // Kick off processing if idle
+    processNextInQueue();
+  };
+
+  // ── cancel chat ────────────────────────────────────────────────
+  const handleCancelChat = async () => {
+    try {
+      await api('/chat/cancel', { method: 'POST', body: JSON.stringify({}) });
+    } catch {}
+    setChatLoading(false);
+    setChatAgent(null);
+    setChatMessages(prev => [...prev, {
+      role: 'assistant',
+      agent: 'system',
+      text: 'Task stopped by user.',
+    }]);
+  };
+
+  // ── edit message (replace user msg + remove subsequent messages, re-send) ──
+  const handleEditMessage = (msgIdx, newText, model) => {
+    // Truncate conversation: keep messages up to (not including) the edited user message
+    setChatMessages(prev => prev.slice(0, msgIdx));
+    // Send the edited text as a new message
+    handleChat(newText, model);
+  };
+
+  // ── retry message (re-send same user message, remove everything after it) ──
+  const handleRetryMessage = (msgIdx, model) => {
+    const msg = chatMessages[msgIdx];
+    if (!msg || msg.role !== 'user') return;
+    // Truncate conversation: keep messages up to (not including) this one
+    setChatMessages(prev => prev.slice(0, msgIdx));
+    // Re-send same text
+    handleChat(msg.text, model);
+  };
+
+  // ── run command in terminal ─────────────────────────────────────
+  const handleRunCommand = useCallback(async (command) => {
+    // Switch to terminal tab so user sees the output
+    setLeftTab('terminal');
+    // Small delay to let the terminal mount if it wasn't visible
+    await new Promise(r => setTimeout(r, 50));
+    if (terminalRef.current) {
+      return terminalRef.current.runCmd(command);
+    }
+    // Fallback if terminal not mounted yet
+    const res = await api('/run', { method: 'POST', body: JSON.stringify({ command }) });
+    return res;
+  }, []);
+
+  // ── cancel task ────────────────────────────────────────────────
+  const handleCancelTask = async (taskId) => {
+    if (!taskId) return;
+    try {
+      await api(`/tasks/${taskId}/cancel`, { method: 'POST', body: JSON.stringify({}) });
+      setTasks(prev => prev.map(t =>
+        t.task_id === taskId ? { ...t, status: 'cancelled' } : t
+      ));
+    } catch {}
+  };
+
+  // ── open task result in chat ─────────────────────────────────────
+  const handleOpenTaskInChat = async (taskId) => {
+    if (!taskId) return;
+    try {
+      const conv = await api(`/tasks/${taskId}/to-conversation`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      // Add the new conversation to the list and switch to it
+      const convSummary = {
+        id: conv.id,
+        title: conv.title,
+        created_at: conv.created_at,
+        updated_at: conv.updated_at,
+        message_count: (conv.messages || []).length,
+      };
+      setConversations(prev => [...prev, convSummary]);
+      setActiveConvId(conv.id);
+      setChatMessages(conv.messages || []);
+    } catch (err) {
+      console.error('Failed to open task in chat:', err);
+    }
+  };
+
+  // ── loading state ───────────────────────────────────────────────
+  if (showSetup === null) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // ── settings modal (overlay, not full replacement) ────────────
+  const settingsModal = (showSetup || showSettings) ? (
+    <SettingsModal
+      onClose={() => { setShowSetup(false); setShowSettings(false); }}
+      isFirstRun={showSetup}
+    />
+  ) : null;
+
+  // ── render ──────────────────────────────────────────────────────
+  return (
+    <div className="h-screen flex flex-col overflow-hidden">
+      {settingsModal}
+      <Header connected={connected} health={health} onSettings={() => setShowSettings(true)} />
+
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-6 py-4 flex gap-5 overflow-hidden">
+        {/* Left column — tabbed panels (same width as chat) */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 max-w-[50%]">
+          <StatsBar agents={agents} health={health} />
+          <ProjectBar projectDir={projectDir} onProjectChange={setProjectDir} />
+
+          {/* Tab bar */}
+          <div className="flex items-center gap-1 mt-4 mb-0 bg-slate-900 border border-slate-800 rounded-t-xl px-2 pt-2">
+            {[
+              { id: 'tasks', label: 'Tasks', icon: 'zap', badge: tasks.filter(t => t.status === 'in_progress' || t.status === 'pending').length || null },
+              { id: 'agents', label: 'Agents', icon: 'radio', badge: Object.keys(agents).length },
+              ...(clusterMode === 'center' ? [{ id: 'workers', label: 'Workers', icon: 'server', badge: clusterWorkers.filter(w => w.status !== 'offline').length || null }] : []),
+              { id: 'memory', label: 'Memory', icon: 'brain', badge: memoryStats.total || null },
+              { id: 'terminal', label: 'Terminal', icon: 'terminal', badge: null },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setLeftTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-t-lg transition-colors ${
+                  leftTab === tab.id
+                    ? 'bg-slate-800 text-slate-200 border border-slate-700 border-b-slate-800'
+                    : 'text-slate-500 hover:text-slate-400'
+                }`}
+              >
+                <Icon name={tab.icon} size={12} className={leftTab === tab.id ? 'text-brand-400' : ''} />
+                {tab.label}
+                {tab.badge != null && (
+                  <span className={`text-[10px] font-medium rounded-full px-1.5 py-0 ${
+                    leftTab === tab.id ? 'bg-slate-700 text-slate-300' : 'bg-slate-800 text-slate-500'
+                  }`}>{tab.badge}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin bg-slate-900 border border-t-0 border-slate-800 rounded-b-xl p-4 min-h-0">
+            {leftTab === 'tasks' && (
+              <TaskPanel onSubmit={handleSubmitTask} onDelete={handleDeleteTask} onCancel={handleCancelTask} onOpenInChat={handleOpenTaskInChat} tasks={tasks} />
+            )}
+            {leftTab === 'agents' && (
+              <AgentGrid agents={agents} />
+            )}
+            {leftTab === 'workers' && (
+              <WorkerPanel workers={clusterWorkers} health={clusterHealth} />
+            )}
+            {leftTab === 'memory' && (
+              <MemoryPanel
+                memories={memories}
+                stats={memoryStats}
+                types={memoryTypes}
+                scopes={memoryScopes}
+                onAdd={handleAddMemory}
+                onDelete={handleDeleteMemory}
+                onRefresh={fetchMemories}
+              />
+            )}
+            <div className={leftTab === 'terminal' ? 'flex flex-col h-full' : 'hidden'}>
+              <TerminalPanel ref={terminalRef} />
+            </div>
+          </div>
+
+          <div className="py-1">
+            <p className="text-[10px] text-slate-600 text-center">
+              AgentArmy Command Center — polling every 5s — {Object.keys(agents).length} agents registered
+            </p>
+          </div>
+        </div>
+
+        {/* Right column — Chat, always visible, full height */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          <Section title="Chat" icon="terminal" stretch className="flex-1 min-h-0">
+            <ChatPanel
+              messages={chatMessages}
+              onSend={handleChat}
+              onEditMessage={handleEditMessage}
+              onRetryMessage={handleRetryMessage}
+              onRunCommand={handleRunCommand}
+              loading={chatLoading}
+              activeAgent={chatAgents.length > 1 ? chatAgents : chatAgent}
+              onStop={handleCancelChat}
+              queueCount={chatQueueCount}
+              conversations={conversations}
+              activeConvId={activeConvId}
+              onSelectConv={handleSelectConversation}
+              onNewConv={handleNewConversation}
+              onDeleteConv={handleDeleteConversation}
+            />
+          </Section>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ── mount ── */
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

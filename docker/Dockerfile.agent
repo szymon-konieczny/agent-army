@@ -1,0 +1,46 @@
+# ============================================================================
+# AgentArmy — Agent Container (Production)
+# ============================================================================
+# Multi-stage build. Runs on both amd64 and arm64 (Apple Silicon).
+# ============================================================================
+
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install from pyproject.toml
+COPY pyproject.toml .
+COPY src/ ./src/
+RUN pip install --user --no-cache-dir .
+
+# --- Final stage ---
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user
+RUN useradd -m -u 1000 agentuser
+
+COPY --from=builder /root/.local /home/agentuser/.local
+COPY src/  /app/src/
+COPY config/ /app/config/
+
+ENV PATH=/home/agentuser/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN chown -R agentuser:agentuser /app
+USER agentuser
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:9000/health')" || exit 1
+
+ENTRYPOINT ["python", "-m", "src.main"]

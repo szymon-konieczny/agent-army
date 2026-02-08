@@ -1,0 +1,334 @@
+# Watcher Agent Configuration
+# Role: System monitoring, logging, and alerting
+
+agent:
+  id: "watcher"
+  name: "Watcher"
+  version: "1.0.0"
+  description: "System monitoring, logging aggregation, and alerting"
+  enabled: true
+
+# Capabilities and permissions
+capabilities:
+  # Log aggregation
+  log_aggregation:
+    enabled: true
+    actions:
+      - "collect_logs"
+      - "aggregate_logs"
+      - "filter_logs"
+      - "search_logs"
+      - "store_logs"
+      - "rotate_logs"
+      - "archive_logs"
+    log_sources:
+      - "/var/log"
+      - "docker_logs"
+      - "application_logs"
+    supported_formats:
+      - "json"
+      - "plain_text"
+      - "structured_logs"
+    max_log_size: "100Gi"
+    rotation_policy: "daily"
+    retention_days: 30
+
+  # Metrics collection
+  metrics_collection:
+    enabled: true
+    actions:
+      - "collect_system_metrics"
+      - "collect_application_metrics"
+      - "collect_container_metrics"
+      - "store_metrics"
+      - "query_metrics"
+      - "generate_dashboards"
+    metrics:
+      - "cpu_usage"
+      - "memory_usage"
+      - "disk_usage"
+      - "network_io"
+      - "container_stats"
+      - "request_rate"
+      - "error_rate"
+      - "latency"
+    collection_interval: "60s"
+    retention_days: 90
+
+  # System monitoring
+  system_monitoring:
+    enabled: true
+    actions:
+      - "monitor_services"
+      - "check_health"
+      - "detect_anomalies"
+      - "track_performance"
+      - "monitor_resources"
+      - "check_disk_space"
+      - "check_memory_usage"
+      - "check_cpu_usage"
+    thresholds:
+      cpu_percent: 80
+      memory_percent: 85
+      disk_percent: 90
+
+  # Alert notification
+  alert_notification:
+    enabled: true
+    actions:
+      - "send_alert"
+      - "escalate_alert"
+      - "acknowledge_alert"
+      - "close_alert"
+      - "resolve_alert"
+      - "create_incident"
+    alert_channels:
+      - type: "whatsapp"
+        filter: "critical,high"
+      - type: "email"
+        filter: "critical,high,medium"
+      - type: "slack"
+        filter: "all"
+      - type: "webhook"
+        filter: "all"
+    alert_routing:
+      critical: "immediate"
+      high: "within_5_minutes"
+      medium: "within_30_minutes"
+      low: "daily_digest"
+
+  # Filesystem access - read-only to logs and metrics
+  filesystem_access:
+    enabled: true
+    access_level: "read-only"
+    actions:
+      - "read_file"
+      - "list_directory"
+      - "get_file_stats"
+    allowed_paths:
+      - "/var/log"
+      - "/app/logs"
+      - "/app/metrics"
+    forbidden_paths:
+      - "/root"
+      - "/etc/shadow"
+      - "/etc/gshadow"
+      - "/var/lib/postgresql"
+
+  # LLM access for analysis and insights
+  llm_access:
+    enabled: true
+    models:
+      - "claude-3-5-sonnet"
+    max_tokens_per_request: 4000
+    max_tokens_per_day: 400000
+    actions:
+      - "analyze_logs"
+      - "identify_patterns"
+      - "suggest_actions"
+      - "generate_insights"
+      - "summarize_metrics"
+
+# Resource limits
+resource_limits:
+  cpu:
+    request: "0.5"
+    limit: "1"
+  memory:
+    request: "500M"
+    limit: "1Gi"
+  storage:
+    request: "50Gi"
+    limit: "200Gi"
+
+# Token usage limits
+token_limits:
+  max_tokens_per_day: 400000
+  max_tokens_per_hour: 20000
+  max_tokens_per_request: 4000
+  rate_limit_window: 3600
+
+# Approval requirements
+requires_approval_for:
+  # None - Watcher has read-only access
+
+# Audit and logging
+audit:
+  enabled: true
+  log_level: "INFO"
+  log_all_collections: false
+  log_alerts: true
+  sensitive_fields_redacted: true
+  fields_to_redact:
+    - "api_key"
+    - "token"
+    - "secret"
+    - "password"
+
+# Dependencies
+depends_on:
+  - "redis"
+  - "rabbitmq"
+  - "postgres"
+
+# Healthcheck configuration
+healthcheck:
+  enabled: true
+  endpoint: "http://localhost:9000/health"
+  interval: 30s
+  timeout: 10s
+  retries: 3
+
+# Startup configuration
+startup:
+  startup_timeout: 30s
+  healthcheck_delay: 5s
+  priority: 5  # Start last, all other services should be available
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  health_check_interval: 30s
+  metrics_collection_interval: 60s
+  log_aggregation_interval: 10s
+  alert_check_interval: 5s
+  anomaly_detection: true
+  anomaly_sensitivity: "medium"
+
+# Dashboard configuration
+dashboards:
+  enabled: true
+  auto_create: true
+  refresh_interval: "30s"
+  dashboards:
+    - name: "system_overview"
+      metrics:
+        - "cpu_usage"
+        - "memory_usage"
+        - "disk_usage"
+        - "network_io"
+
+    - name: "application_health"
+      metrics:
+        - "request_rate"
+        - "error_rate"
+        - "latency"
+        - "container_stats"
+
+    - name: "agent_status"
+      metrics:
+        - "agent_health"
+        - "agent_performance"
+        - "queue_depth"
+        - "message_throughput"
+
+# Alert rules
+alert_rules:
+  enabled: true
+  rules:
+    - name: "high_cpu_usage"
+      condition: "cpu_usage > 80"
+      severity: "high"
+      action: "notify_team"
+
+    - name: "high_memory_usage"
+      condition: "memory_usage > 85"
+      severity: "high"
+      action: "notify_team"
+
+    - name: "disk_space_critical"
+      condition: "disk_usage > 90"
+      severity: "critical"
+      action: "notify_team,create_incident"
+
+    - name: "service_down"
+      condition: "health_check_failed"
+      severity: "critical"
+      action: "notify_team,create_incident,trigger_recovery"
+
+    - name: "error_rate_high"
+      condition: "error_rate > 5%"
+      severity: "medium"
+      action: "notify_team"
+
+    - name: "latency_high"
+      condition: "latency_p99 > 1000ms"
+      severity: "medium"
+      action: "notify_team"
+
+    - name: "anomalous_traffic"
+      condition: "traffic_deviation > 2_sigma"
+      severity: "medium"
+      action: "notify_sentinel"
+
+# Log aggregation configuration
+log_aggregation:
+  enabled: true
+  default_level: "INFO"
+  log_levels:
+    commander: "DEBUG"
+    sentinel: "DEBUG"
+    builder: "INFO"
+    inspector: "INFO"
+    watcher: "INFO"
+    gateway: "INFO"
+  retention:
+    debug_logs: "1 week"
+    info_logs: "2 weeks"
+    warning_logs: "1 month"
+    error_logs: "3 months"
+    critical_logs: "1 year"
+
+# Metrics retention
+metrics_retention:
+  granular_metrics: "7 days"
+  hourly_metrics: "30 days"
+  daily_metrics: "1 year"
+
+# Scheduling
+scheduling:
+  enabled: true
+  jobs:
+    - name: "hourly_metrics_collection"
+      schedule: "0 * * * *"
+      action: "collect_metrics"
+
+    - name: "daily_log_rotation"
+      schedule: "0 0 * * *"
+      action: "rotate_logs"
+
+    - name: "weekly_log_archival"
+      schedule: "0 2 * * 0"
+      action: "archive_logs"
+
+    - name: "daily_health_summary"
+      schedule: "0 8 * * *"
+      action: "generate_health_summary"
+
+    - name: "anomaly_detection_analysis"
+      schedule: "*/5 * * * *"
+      action: "analyze_anomalies"
+
+# Notification aggregation
+notification_aggregation:
+  enabled: true
+  alert_batching: true
+  batch_interval: "5m"
+  low_priority_digest: "daily"
+  deduplicate_alerts: true
+  deduplication_window: "15m"
+
+# Data export configuration
+data_export:
+  enabled: true
+  formats:
+    - "json"
+    - "csv"
+    - "parquet"
+  export_schedule:
+    - frequency: "daily"
+      time: "2:00 AM"
+      destination: "s3://backups/daily"
+    - frequency: "weekly"
+      time: "Sunday 3:00 AM"
+      destination: "s3://backups/weekly"
