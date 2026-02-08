@@ -4271,7 +4271,10 @@ function App() {
     } catch {}
   }, []);
 
-  // Load memories when switching to memory tab
+  // Fetch memory count on mount so the badge is visible immediately
+  useEffect(() => { fetchMemories(); }, [fetchMemories]);
+
+  // Refresh memories when switching to the memory tab
   useEffect(() => {
     if (leftTab === 'memory') fetchMemories();
   }, [leftTab, fetchMemories]);
