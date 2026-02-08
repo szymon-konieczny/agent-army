@@ -83,25 +83,25 @@ end tell
     },
     "create_event": {
         "label": "Create Calendar Event (macOS)",
-        "description": "Creates a new event in macOS Calendar.app",
+        "description": "Creates a new event in the default macOS Calendar.app calendar",
         "script": '''
--- Args: calendarName, title, startDateTime, endDateTime, notes
+-- Args: title, startDateTime, endDateTime [, notes]
 on run argv
-    set calName to item 1 of argv
-    set evtTitle to item 2 of argv
-    set evtStart to date (item 3 of argv)
-    set evtEnd to date (item 4 of argv)
+    set evtTitle to item 1 of argv
+    set evtStart to date (item 2 of argv)
+    set evtEnd to date (item 3 of argv)
     set evtNotes to ""
-    if (count of argv) > 4 then
-        set evtNotes to item 5 of argv
+    if (count of argv) > 3 then
+        set evtNotes to item 4 of argv
     end if
 
     tell application "Calendar"
-        tell calendar calName
-            make new event with properties {summary:evtTitle, start date:evtStart, end date:evtEnd, description:evtNotes}
-        end tell
+        -- Use the default calendar (works regardless of locale/language)
+        set targetCalendar to default calendar
+        make new event at targetCalendar with properties {summary:evtTitle, start date:evtStart, end date:evtEnd, description:evtNotes}
+        set calName to name of targetCalendar
     end tell
-    return "Created: " & evtTitle & " on " & evtStart
+    return "Created: " & evtTitle & " on " & evtStart & " (calendar: " & calName & ")"
 end run
 ''',
     },
@@ -454,6 +454,9 @@ class SchedulerAgent(BaseAgent):
                 f"{macos_templates}\n"
                 "To run these, write the AppleScript to a temp file and execute with:\n"
                 "  `osascript /tmp/calendar_script.scpt`\n"
+                "IMPORTANT: When creating events, always use `default calendar` — "
+                "NEVER hardcode a calendar name like \"Calendar\" because the name "
+                "varies by locale (e.g. \"Kalendarz\" in Polish).\n"
                 "Always capture output with bash command substitution.\n"
             )
         else:
