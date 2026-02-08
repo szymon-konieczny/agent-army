@@ -1976,6 +1976,22 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
     // Stop STT if active
     if (listening) { recognitionRef.current?.stop(); setListening(false); }
     if (!input.trim() && attachments.length === 0) return;
+
+    // ── /calendar command — open date/time picker for scheduler ──
+    const calMatch = input.trim().match(/^\/calendar\s+(.+)/i);
+    if (calMatch) {
+      setCalendarMessage(calMatch[1].trim());
+      // Pre-fill: next round hour tomorrow
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setMinutes(0, 0, 0);
+      setCalendarDateTime(toDateTimeLocal(d));
+      setCalendarDuration(60);
+      setShowCalendarPicker(true);
+      setInput('');
+      return;
+    }
+
     const prepared = await prepareAttachments();
     onSend(input.trim(), selectedModel, prepared);
     setInput('');
@@ -4379,21 +4395,6 @@ function App() {
   }, [activeConvId]);
 
   const handleChat = (text, model, chatAttachments, forceAgent) => {
-    // ── /calendar command — open date/time picker for scheduler ──
-    const calMatch = text.match(/^\/calendar\s+(.+)/i);
-    if (calMatch) {
-      setCalendarMessage(calMatch[1].trim());
-      // Pre-fill: next round hour tomorrow
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      d.setMinutes(0, 0, 0);
-      setCalendarDateTime(toDateTimeLocal(d));
-      setCalendarDuration(60);
-      setShowCalendarPicker(true);
-      setInput('');
-      return;
-    }
-
     // ── /imagine command — generate image via Gemini Nano Banana ──
     const imagineMatch = text.match(/^\/imagine\s+(.+)/i);
     if (imagineMatch) {
