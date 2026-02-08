@@ -2403,24 +2403,30 @@ def create_app() -> FastAPI:
         Returns:
             Dict with the authorization URL to redirect the user to.
         """
-        client_id = os.environ.get("AGENTARMY_GOOGLE_OAUTH_CLIENT_ID", "")
-        redirect_uri = os.environ.get(
-            "AGENTARMY_GOOGLE_OAUTH_REDIRECT_URI",
-            "http://localhost:8000/api/auth/google/callback",
-        )
-        if not client_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Google OAuth not configured. Set AGENTARMY_GOOGLE_OAUTH_CLIENT_ID in Settings.",
+        try:
+            client_id = os.environ.get("AGENTARMY_GOOGLE_OAUTH_CLIENT_ID", "")
+            redirect_uri = os.environ.get(
+                "AGENTARMY_GOOGLE_OAUTH_REDIRECT_URI",
+                "http://localhost:8000/api/auth/google/callback",
             )
-        import base64
-        state = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode()
-        url = GoogleOAuthTokenManager.build_authorize_url(
-            client_id=client_id,
-            redirect_uri=redirect_uri,
-            state=state,
-        )
-        return {"url": url, "state": state}
+            if not client_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Google OAuth not configured. Set AGENTARMY_GOOGLE_OAUTH_CLIENT_ID in the Google Calendar settings tab.",
+                )
+            import base64
+            state = base64.urlsafe_b64encode(os.urandom(32)).rstrip(b"=").decode()
+            url = GoogleOAuthTokenManager.build_authorize_url(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                state=state,
+            )
+            return {"url": url, "state": state}
+        except HTTPException:
+            raise
+        except Exception as exc:
+            await logger.aerror("google_auth_authorize_failed", error=str(exc), error_type=type(exc).__name__)
+            raise HTTPException(status_code=500, detail=f"Google authorization error: {exc}")
 
     @app.get("/api/auth/google/callback")
     async def google_auth_callback(code: str = "", state: str = "", error: str = ""):

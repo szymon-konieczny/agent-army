@@ -3796,7 +3796,13 @@ function SettingsModal({ onClose, isFirstRun }) {
                         setGcalLoading(true);
                         // Open popup synchronously so the browser trusts the click
                         const popup = window.open('about:blank', 'gcal_auth', 'width=600,height=700');
-                        api('/api/auth/google/authorize').then(data => {
+                        // Save credentials first so they're in os.environ when authorize runs
+                        const toSave = {};
+                        Object.entries(keys).forEach(([k, v]) => { if (v && v.trim()) toSave[k] = v.trim(); });
+                        const savePromise = Object.keys(toSave).length > 0
+                          ? api('/api/setup/save', { method: 'POST', body: JSON.stringify({ keys: toSave }) })
+                          : Promise.resolve();
+                        savePromise.then(() => api('/api/auth/google/authorize')).then(data => {
                           if (data.url) {
                             if (popup && !popup.closed) {
                               popup.location.href = data.url;
