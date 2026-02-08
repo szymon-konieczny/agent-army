@@ -3400,31 +3400,70 @@ function SettingsModal({ onClose, isFirstRun }) {
     }
   };
 
-  const InfraRow = ({ name, label, optional, startable }) => {
+  const InfraRow = ({ name, label }) => {
     const s = infra[name] || {};
-    const ok = s.status === 'running';
+    const external = s.status === 'running';
+    const hasFallback = !!s.fallback;
+    const active = s.active !== false;  // active means functional (external or fallback)
     const starting = startingService[name];
+    const description = s.description || '';
+
+    // Determine visual status
+    const dotColor = external
+      ? 'bg-emerald-400'
+      : starting
+        ? 'bg-amber-400 animate-pulse'
+        : hasFallback
+          ? 'bg-sky-400'          // blue = running via built-in fallback
+          : s.required
+            ? 'bg-red-500'        // red = required but missing
+            : 'bg-slate-500';     // grey = optional, not active
+
+    const statusText = external
+      ? `port ${s.port}`
+      : starting
+        ? 'starting...'
+        : hasFallback && s.backend === 'in-memory'
+          ? 'built-in (in-memory)'
+          : hasFallback && s.backend === 'redis-pubsub'
+            ? 'built-in (via Redis)'
+            : hasFallback && s.backend === 'cloud-llm'
+              ? 'using cloud providers'
+              : s.required
+                ? 'not running'
+                : 'not active';
+
+    const statusColor = external
+      ? 'text-emerald-400'
+      : hasFallback
+        ? 'text-sky-400'
+        : s.required
+          ? 'text-red-400'
+          : 'text-slate-500';
+
     return (
-      <div className="flex items-center justify-between py-2 border-b border-slate-800 last:border-0">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${ok ? 'bg-emerald-400' : starting ? 'bg-amber-400 animate-pulse' : (optional ? 'bg-slate-500' : 'bg-red-500')}`} />
-          <span className="text-sm text-slate-300">{label}</span>
-          {optional && <span className="text-[10px] text-slate-600 font-medium">(optional)</span>}
+      <div className="py-2.5 border-b border-slate-800 last:border-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+            <span className="text-sm text-slate-300">{label}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {!external && !hasFallback && !s.required && (
+              <button
+                onClick={() => startService(name)}
+                disabled={starting}
+                className="px-2 py-0.5 text-[10px] font-semibold rounded bg-brand-600 hover:bg-brand-500 text-white transition-colors disabled:opacity-50"
+              >
+                {starting ? 'Starting...' : 'Start'}
+              </button>
+            )}
+            <span className={`text-xs font-mono ${statusColor}`}>{statusText}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!ok && startable && (
-            <button
-              onClick={() => startService(name)}
-              disabled={starting}
-              className="px-2 py-0.5 text-[10px] font-semibold rounded bg-brand-600 hover:bg-brand-500 text-white transition-colors disabled:opacity-50"
-            >
-              {starting ? 'Starting...' : 'Start'}
-            </button>
-          )}
-          <span className={`text-xs font-mono ${ok ? 'text-emerald-400' : (optional ? 'text-slate-500' : 'text-red-400')}`}>
-            {ok ? `port ${s.port}` : starting ? 'starting...' : 'not running'}
-          </span>
-        </div>
+        {description && !external && (
+          <p className="text-[10px] text-slate-600 mt-0.5 ml-4">{description}</p>
+        )}
       </div>
     );
   };
@@ -3514,9 +3553,17 @@ function SettingsModal({ onClose, isFirstRun }) {
               <div>
                 <h3 className="text-base font-semibold mb-1">Infrastructure</h3>
                 <p className="text-xs text-slate-500 mb-4">
-                  Only PostgreSQL is required. Redis and Neo4j fall back to in-memory storage automatically.
-                  Run <code className="text-brand-400">make infra-up</code> to start services.
+                  The app works out of the box. Only PostgreSQL is required — everything else has
+                  built-in fallbacks that activate automatically.
                 </p>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mb-3 text-[10px] text-slate-500">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> External</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-400 inline-block" /> Built-in fallback</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Required</span>
+                </div>
+
                 {infraError && (
                   <div className="mb-2 px-3 py-2 bg-red-900/20 border border-red-500/20 rounded-lg flex items-start gap-2">
                     <Icon name="alert-triangle" size={14} className="text-red-400 mt-0.5 shrink-0" />
@@ -3528,17 +3575,23 @@ function SettingsModal({ onClose, isFirstRun }) {
                 )}
                 <div className="bg-slate-800/50 rounded-xl p-3 mb-3">
                   <InfraRow name="postgresql" label="PostgreSQL" />
-                  <InfraRow name="redis" label="Redis" optional startable />
-                  <InfraRow name="rabbitmq" label="RabbitMQ" optional startable />
-                  <InfraRow name="neo4j" label="Neo4j" optional startable />
-                  <InfraRow name="ollama" label="Ollama (local LLM)" optional startable />
+                  <InfraRow name="redis" label="Redis" />
+                  <InfraRow name="neo4j" label="Neo4j (Knowledge Graph)" />
+                  <InfraRow name="rabbitmq" label="RabbitMQ" />
+                  <InfraRow name="ollama" label="Ollama (Local LLM)" />
                 </div>
-                <button
-                  onClick={() => api('/api/setup/infra').then(d => setInfra(d.services || {})).catch(() => {})}
-                  className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1"
-                >
-                  <Icon name="refresh-cw" size={10} /> Refresh status
-                </button>
+
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => api('/api/setup/infra').then(d => setInfra(d.services || {})).catch(() => {})}
+                    className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1"
+                  >
+                    <Icon name="refresh-cw" size={10} /> Refresh status
+                  </button>
+                  <p className="text-[10px] text-slate-600">
+                    Install external services for better performance at scale
+                  </p>
+                </div>
               </div>
             )}
 

@@ -700,13 +700,42 @@ async def browse_directory(path: str = "") -> dict[str, Any]:
 
 @router.get("/infra")
 async def check_infrastructure() -> dict[str, Any]:
-    """Check health of Docker infrastructure services."""
+    """Check health of infrastructure services.
+
+    Each service reports its status and fallback behaviour so the
+    dashboard can render a clear, zero-dependency-friendly view.
+    """
     services = {
-        "postgresql":  {"host": "127.0.0.1", "port": 5432, "required": True},
-        "redis":       {"host": "127.0.0.1", "port": 6379, "required": False},
-        "rabbitmq":    {"host": "127.0.0.1", "port": 5672, "required": False},
-        "neo4j":       {"host": "127.0.0.1", "port": 7687, "required": False},
-        "ollama":      {"host": "127.0.0.1", "port": 11434, "required": False},
+        "postgresql": {
+            "host": "127.0.0.1", "port": 5432,
+            "required": True,
+            "fallback": None,
+            "description": "Primary database — required",
+        },
+        "redis": {
+            "host": "127.0.0.1", "port": 6379,
+            "required": False,
+            "fallback": "in-memory",
+            "description": "Cache & pub/sub — falls back to built-in memory store",
+        },
+        "neo4j": {
+            "host": "127.0.0.1", "port": 7687,
+            "required": False,
+            "fallback": "in-memory",
+            "description": "Knowledge graph — falls back to built-in memory graph",
+        },
+        "rabbitmq": {
+            "host": "127.0.0.1", "port": 5672,
+            "required": False,
+            "fallback": "redis-pubsub",
+            "description": "Message queue — falls back to Redis/memory pub-sub",
+        },
+        "ollama": {
+            "host": "127.0.0.1", "port": 11434,
+            "required": False,
+            "fallback": "cloud-llm",
+            "description": "Local LLM — falls back to cloud providers (Claude, OpenAI, etc.)",
+        },
     }
 
     results: dict[str, Any] = {}
@@ -717,11 +746,16 @@ async def check_infrastructure() -> dict[str, Any]:
             "port": info["port"],
             "status": "running" if reachable else "stopped",
             "required": info["required"],
+            "fallback": info["fallback"],
+            "description": info["description"],
+            # "active" means the service is functional — either external or via fallback
+            "active": reachable or info["fallback"] is not None,
+            "backend": "external" if reachable else (info["fallback"] or "unavailable"),
         }
 
     all_core_up = all(
         results[s]["status"] == "running"
-        for s in ["postgresql"]  # Only PostgreSQL is required; Redis uses in-memory fallback
+        for s in ["postgresql"]
     )
 
     return {
