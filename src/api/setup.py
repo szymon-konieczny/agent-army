@@ -815,12 +815,13 @@ async def start_service(body: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True, "message": f"{name} already running on port {port}"}
 
     # Try Homebrew first (macOS)
+    brew_error = ""
     if has_brew:
         brew_pkg = brew_service_map.get(name)
         if brew_pkg:
             try:
                 # Check if installed
-                check = _brew_run(["list", brew_pkg], capture_output=True, timeout=10)
+                check = _brew_run(["list", brew_pkg], capture_output=True, text=True, timeout=10)
                 if check.returncode != 0:
                     # Install via Homebrew
                     install = _brew_run(
@@ -828,39 +829,55 @@ async def start_service(body: dict[str, Any]) -> dict[str, Any]:
                         capture_output=True, text=True, timeout=180,
                     )
                     if install.returncode != 0:
-                        pass  # Fall through to Docker
+                        brew_error = install.stderr.strip()[:300] or install.stdout.strip()[:300] or "brew install failed"
+                        # Fall through to Docker
                     else:
                         # Start via brew services
-                        _brew_run(
+                        start = _brew_run(
                             ["services", "start", brew_pkg],
-                            capture_output=True, timeout=15,
+                            capture_output=True, text=True, timeout=15,
                         )
-                        # Wait for port
+                        if start.returncode != 0:
+                            brew_error = start.stderr.strip()[:200] or "brew services start failed"
+                        else:
+                            # Wait for port
+                            if port:
+                                for _ in range(12):
+                                    await asyncio.sleep(0.5)
+                                    if _is_port_open("127.0.0.1", port):
+                                        return {"ok": True, "message": f"{name} installed and started via Homebrew on port {port}"}
+                            return {"ok": True, "message": f"{name} installed via Homebrew (may still be initializing)"}
+                else:
+                    # Already installed — just start
+                    start = _brew_run(
+                        ["services", "start", brew_pkg],
+                        capture_output=True, text=True, timeout=15,
+                    )
+                    if start.returncode != 0:
+                        brew_error = start.stderr.strip()[:200] or "brew services start failed"
+                    else:
                         if port:
                             for _ in range(12):
                                 await asyncio.sleep(0.5)
                                 if _is_port_open("127.0.0.1", port):
-                                    return {"ok": True, "message": f"{name} installed and started via Homebrew on port {port}"}
-                        return {"ok": True, "message": f"{name} installed via Homebrew (may still be initializing)"}
-                else:
-                    # Already installed — just start
-                    _brew_run(
-                        ["services", "start", brew_pkg],
-                        capture_output=True, timeout=15,
-                    )
-                    if port:
-                        for _ in range(12):
-                            await asyncio.sleep(0.5)
-                            if _is_port_open("127.0.0.1", port):
-                                return {"ok": True, "message": f"{name} started via Homebrew on port {port}"}
-                    return {"ok": True, "message": f"{name} brew service started (may still be initializing)"}
-            except Exception:
-                pass  # Fall through to Docker
+                                    return {"ok": True, "message": f"{name} started via Homebrew on port {port}"}
+                        return {"ok": True, "message": f"{name} brew service started (may still be initializing)"}
+            except subprocess.TimeoutExpired:
+                brew_error = f"Homebrew timed out — try 'brew install {brew_pkg}' manually"
+            except Exception as exc:
+                brew_error = str(exc)[:200]
 
     # Docker-based fallback
-    compose_bin = shutil.which("docker") and "docker compose"
-    if not compose_bin:
-        return {"ok": False, "error": f"Cannot start {name}: neither Homebrew nor Docker available. Install via 'brew install {brew_service_map.get(name, name)}' or install Docker."}
+    has_docker = shutil.which("docker")
+    if not has_docker:
+        # No Docker either — report the Homebrew error since that's the primary path
+        hint = f"brew install {brew_service_map.get(name, name)}"
+        if _is_arm_mac:
+            hint = f"arch -arm64 {hint}"
+        if brew_error:
+            return {"ok": False, "error": f"{name}: Homebrew failed: {brew_error}. Docker is not available either. Try '{hint}' manually."}
+        return {"ok": False, "error": f"Cannot start {name}: neither Homebrew nor Docker available. Install via '{hint}' or install Docker."}
+    compose_bin = "docker compose"
 
     project_root = pathlib.Path(__file__).resolve().parent.parent.parent
     compose_file = project_root / "docker" / "docker-compose.local.yaml"
