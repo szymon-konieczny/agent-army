@@ -1134,29 +1134,40 @@ class BaseAgent(ABC):
                     parts.append(f"stderr:\n{stderr_s.strip()}")
                 body = "\n".join(parts) or "(no output)"
 
+                # Use raw <pre><code> so the dashboard markdown renderer
+                # does NOT treat this as an interactive code block
+                # (no Run / Approve buttons on already-executed output).
+                import html as _html
+                body_escaped = _html.escape(body)
+                cmd_escaped = _html.escape(command[:120])
+
                 html = (
                     f"{icon} **Command {stat}**\n\n"
-                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
-                    f"```\n{body}\n```\n\n"
-                    f"</details>"
+                    f"<details><summary><code>{cmd_escaped}</code></summary>"
+                    f"<pre><code>{body_escaped}</code></pre>"
+                    f"</details>\n\n"
                 )
                 return html, rc
 
             except _aio.TimeoutError:
+                import html as _html
+                cmd_escaped = _html.escape(command[:120])
                 html = (
                     f"\u26a0\ufe0f **Command timed out** ({timeout:.0f}s limit)\n\n"
-                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
-                    f"```bash\n{command}\n```\n\n"
-                    f"</details>"
+                    f"<details><summary><code>{cmd_escaped}</code></summary>"
+                    f"<pre><code>{_html.escape(command)}</code></pre>"
+                    f"</details>\n\n"
                 )
                 return html, -1
 
             except Exception as exc:
+                import html as _html
+                cmd_escaped = _html.escape(command[:120])
                 html = (
-                    f"\u274c **Execution error:** {str(exc)[:200]}\n\n"
-                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
-                    f"```bash\n{command}\n```\n\n"
-                    f"</details>"
+                    f"\u274c **Execution error:** {_html.escape(str(exc)[:200])}\n\n"
+                    f"<details><summary><code>{cmd_escaped}</code></summary>"
+                    f"<pre><code>{_html.escape(command)}</code></pre>"
+                    f"</details>\n\n"
                 )
                 return html, -1
 
