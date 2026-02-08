@@ -884,29 +884,19 @@ class BaseAgent(ABC):
             f"You have access to a terminal/shell in the project directory. "
             f"You can execute git commands, build tools, linters, test runners, package managers, and any CLI tool.\n\n"
             f"**AUTONOMOUS EXECUTION — CRITICAL:**\n"
-            f"You are an autonomous agent. When the user asks you to DO something (commit, deploy, fix, build, test, etc.), "
-            f"you should PERFORM the action by presenting a SINGLE consolidated ```bash block that does everything, "
-            f"NOT a series of individual commands for the user to run one by one.\n"
-            f"- **WRONG**: Showing 6 separate bash blocks (git status, git checkout, git add, git commit, git push) for the user to click Run on each.\n"
-            f"- **RIGHT**: One bash block that chains all steps: `git checkout develop && git add -A && git commit -m 'message' && git push origin develop`\n"
-            f"- Before the bash block, give a 1-2 sentence summary of what you're about to do.\n"
-            f"- After execution, report the result concisely. Use a `<details>` tag to tuck verbose output away:\n"
-            f"  ```\n"
-            f"  <details><summary>Command output</summary>\n\n"
-            f"  ```\n"
-            f"  (output here)\n"
-            f"  ```\n\n"
-            f"  </details>\n"
-            f"  ```\n\n"
-            f"**When to show vs. hide bash commands:**\n"
-            f"- **Show ONE ```bash block** for actionable operations the user triggered: commits, deploys, installs, builds, fixes, git operations. "
-            f"Consolidate multi-step operations into a single chained command.\n"
-            f"- **DO NOT show bash blocks** for your own exploration/analysis: `find`, `cat`, `grep`, `ls`, `head`, `wc`, `git status`, `git log`, `git diff`. "
-            f"Instead, describe what you found in prose. The user wants **results**, not a list of commands.\n"
-            f"- When analyzing a codebase, reading files, or exploring project structure: "
-            f"present your findings as organized prose/lists — NOT as bash commands the user has to run one by one.\n"
-            f"- Example of WRONG: showing 7 bash blocks like `find src -name '*.ts'`, `grep -rn '@Get'`, `cat src/main.ts`\n"
-            f"- Example of RIGHT: 'The project has 5 controllers with 23 endpoints: ...' (organized summary)\n\n"
+            f"You are an autonomous agent. Any ```bash block you write WILL BE AUTO-EXECUTED immediately. "
+            f"You will NOT see the output — the system captures it and shows the user a collapsible result. "
+            f"Therefore:\n"
+            f"- ONLY write ```bash blocks for commands you ACTUALLY WANT TO RUN right now.\n"
+            f"- NEVER write exploratory/diagnostic commands as ```bash blocks (git status, git log, find, grep, ls, cat). "
+            f"Instead, describe what the user should know in prose.\n"
+            f"- Consolidate multi-step operations into ONE ```bash block with `&&` chaining.\n"
+            f"  - WRONG: 6 separate bash blocks (git status, git checkout, git add, git commit, git push)\n"
+            f"  - RIGHT: One block: `git checkout develop && git add -A && git commit -m 'msg' && git push`\n"
+            f"- Before the bash block, give a 1-2 sentence summary of what will happen.\n"
+            f"- After the bash block, add a brief note about expected outcome.\n"
+            f"- If the user asks to 'check' or 'show' something (git status, diff, etc.), "
+            f"describe the answer in prose — do NOT emit a bash block for read-only queries.\n\n"
             f"Integration tokens (Figma, GitHub, Jira) are injected as environment variables when commands run. "
             f"Use `$FIGMA_TOKEN`, `$GITHUB_TOKEN`, `$JIRA_API_TOKEN`, `$JIRA_EMAIL`, `$JIRA_DOMAIN` in bash blocks. "
             f"NEVER use placeholder tokens like `<YOUR_FIGMA_TOKEN>` or `<YOUR_TOKEN>` — real tokens are already available.\n"
@@ -936,10 +926,9 @@ class BaseAgent(ABC):
             f"## RESPONSE STRUCTURE\n"
             f"For action requests (commit, deploy, build, fix), follow this pattern:\n"
             f"1. Brief summary of what you'll do (1-2 sentences)\n"
-            f"2. One consolidated ```bash block with the full operation\n"
-            f"3. After execution: concise result + verbose output in a collapsible `<details>` block\n"
-            f"NEVER present multiple sequential bash blocks for the user to click through one by one. "
-            f"Chain commands with `&&` into a single block. You are autonomous — act, don't ask.\n\n"
+            f"2. ONE consolidated ```bash block — it will be auto-executed\n"
+            f"3. Brief note on expected result (the actual output appears automatically in a collapsible section)\n"
+            f"For information requests (explain, analyze, review), respond in prose — no bash blocks.\n\n"
             f"## OUTPUT FORMATTING\n"
             f"When presenting design data (Figma tokens, colors, typography, etc.), "
             f"ALWAYS format results as a clean, human-readable summary organized by category:\n"
@@ -1019,11 +1008,144 @@ class BaseAgent(ABC):
                 f"Please check your API keys in Settings or start Ollama for local inference."
             )
 
+        # ── Auto-execute bash blocks the agent produced ────────────
+        project_dir = task.get("project_dir", "") or (
+            task.get("payload", {}) or {}
+        ).get("project_dir", "")
+        if response_text and project_dir:
+            try:
+                response_text = await self._auto_execute_bash_blocks(
+                    response_text, project_dir
+                )
+            except Exception as exec_err:
+                await self._logger.awarning(
+                    "auto_execute_failed",
+                    agent_id=self.identity.id,
+                    error=str(exec_err)[:200],
+                )
+
         return {
             "status": "completed",
             "response": response_text,
             "agent_id": self.identity.id,
         }
+
+    # ── Auto-execution of bash blocks ──────────────────────────
+
+    # Commands that must never be auto-executed
+    _BLOCKED_COMMANDS = frozenset({
+        "rm -rf /", "rm -rf /*", "mkfs", "dd if=", ":()", "fork bomb",
+        "shutdown", "reboot", "halt", "poweroff", "init 0", "init 6",
+        "chmod -R 777 /", "chown -R", "> /dev/sda",
+    })
+
+    async def _auto_execute_bash_blocks(
+        self,
+        text: str,
+        project_dir: str,
+    ) -> str:
+        """Extract ```bash blocks from LLM response, execute them, and
+        replace with collapsible output.
+
+        Returns the modified response text with executed results inline.
+        """
+        import asyncio as _aio
+        import re
+
+        pattern = re.compile(r"```(?:bash|sh|shell)\n(.*?)```", re.DOTALL)
+        matches = list(pattern.finditer(text))
+        if not matches:
+            return text
+
+        result_text = text
+        # Process in reverse so string indices stay valid
+        for match in reversed(matches):
+            command = match.group(1).strip()
+            if not command:
+                continue
+
+            # Safety check
+            cmd_lower = command.lower()
+            blocked = False
+            for b in self._BLOCKED_COMMANDS:
+                if b in cmd_lower:
+                    blocked = True
+                    break
+
+            if blocked:
+                continue
+
+            # Build env with integration tokens
+            run_env = os.environ.copy()
+            api_port = os.environ.get("AGENTARMY_PORT", "8000")
+            run_env["AGENTARMY_API_URL"] = f"http://localhost:{api_port}"
+            for env_key, state_key in [
+                ("FIGMA_TOKEN", "figma_token"),
+                ("GITHUB_TOKEN", "github_token"),
+                ("JIRA_API_TOKEN", "jira_api_token"),
+                ("JIRA_EMAIL", "jira_email"),
+                ("JIRA_DOMAIN", "jira_domain"),
+            ]:
+                val = os.environ.get(env_key, "")
+                if val:
+                    run_env[env_key] = val
+
+            cwd = project_dir or os.getcwd()
+
+            try:
+                proc = await _aio.create_subprocess_shell(
+                    command,
+                    stdout=_aio.subprocess.PIPE,
+                    stderr=_aio.subprocess.PIPE,
+                    cwd=cwd,
+                    env=run_env,
+                )
+                stdout_bytes, stderr_bytes = await _aio.wait_for(
+                    proc.communicate(), timeout=60.0
+                )
+                stdout_str = (stdout_bytes or b"").decode("utf-8", errors="replace")[-4000:]
+                stderr_str = (stderr_bytes or b"").decode("utf-8", errors="replace")[-2000:]
+                exit_code = proc.returncode or 0
+
+                if exit_code == 0:
+                    status_icon = "\u2705"  # ✅
+                    status_text = "completed successfully"
+                else:
+                    status_icon = "\u274c"  # ❌
+                    status_text = f"exited with code {exit_code}"
+
+                output_parts = []
+                if stdout_str.strip():
+                    output_parts.append(stdout_str.strip())
+                if stderr_str.strip():
+                    output_parts.append(f"stderr:\n{stderr_str.strip()}")
+                output_combined = "\n".join(output_parts) or "(no output)"
+
+                replacement = (
+                    f"{status_icon} **Command {status_text}**\n\n"
+                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
+                    f"```\n{output_combined}\n```\n\n"
+                    f"</details>"
+                )
+
+            except _aio.TimeoutError:
+                replacement = (
+                    f"\u26a0\ufe0f **Command timed out** (60s limit)\n\n"
+                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
+                    f"```bash\n{command}\n```\n\n"
+                    f"</details>"
+                )
+            except Exception as exc:
+                replacement = (
+                    f"\u274c **Execution error:** {str(exc)[:200]}\n\n"
+                    f"<details><summary><code>{command[:120]}</code></summary>\n\n"
+                    f"```bash\n{command}\n```\n\n"
+                    f"</details>"
+                )
+
+            result_text = result_text[:match.start()] + replacement + result_text[match.end():]
+
+        return result_text
 
     @abstractmethod
     async def process_task(self, task: dict[str, Any]) -> dict[str, Any]:
