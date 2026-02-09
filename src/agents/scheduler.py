@@ -140,7 +140,17 @@ on run argv
     set seconds of evtEnd to 0
 
     tell application "Calendar"
-        set targetCalendar to default calendar
+        -- Find first writable calendar (default may be read-only)
+        set targetCalendar to missing value
+        repeat with cal in calendars
+            if writable of cal then
+                set targetCalendar to cal
+                exit repeat
+            end if
+        end repeat
+        if targetCalendar is missing value then
+            return "ERROR: No writable calendar found. All calendars are read-only."
+        end if
         make new event at targetCalendar with properties {summary:evtTitle, start date:evtStart, end date:evtEnd, description:evtNotes}
         set calName to name of targetCalendar
     end tell
