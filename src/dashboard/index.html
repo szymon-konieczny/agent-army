@@ -1628,33 +1628,38 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
       return;
     }
 
-    // Step 1: Request mic permission explicitly (triggers browser prompt)
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // Step 1: Request mic permission (if mediaDevices API is available)
+    // Some browsers/WebViews don't expose mediaDevices even on localhost,
+    // but SpeechRecognition can still work as it manages its own mic access.
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Got permission — stop the stream immediately (Speech API manages its own)
+        stream.getTracks().forEach(t => t.stop());
+        setSttPermission('granted');
+      } catch (err) {
+        console.warn('Mic permission error:', err.name, err.message);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setSttPermission('denied');
+          setSttError('denied');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          setSttError('no-mic');
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          setSttError('mic-busy');
+        } else if (err.name === 'AbortError') {
+          setSttError('mic-abort');
+        } else {
+          setSttError('mic-error:' + err.name + ':' + (err.message || '').slice(0, 80));
+        }
+        return;
+      }
+    } else if (!hasSpeechAPI) {
+      // No mediaDevices AND no SpeechRecognition — truly unsupported
       setSttError('no-media-api');
       return;
     }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Got permission — stop the stream immediately (Speech API manages its own)
-      stream.getTracks().forEach(t => t.stop());
-      setSttPermission('granted');
-    } catch (err) {
-      console.warn('Mic permission error:', err.name, err.message);
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setSttPermission('denied');
-        setSttError('denied');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setSttError('no-mic');
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setSttError('mic-busy');
-      } else if (err.name === 'AbortError') {
-        setSttError('mic-abort');
-      } else {
-        setSttError('mic-error:' + err.name + ':' + (err.message || '').slice(0, 80));
-      }
-      return;
-    }
+    // else: no mediaDevices but SpeechRecognition available — skip permission
+    // check and let Speech API handle mic access directly.
 
     // Step 2: Start Speech Recognition
     if (!hasSpeechAPI) {
