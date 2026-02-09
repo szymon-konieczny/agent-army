@@ -1,4 +1,4 @@
-"""Hugging Face Inference API client for AgentArmy with async support."""
+"""Hugging Face Inference API client for Code Horde with async support."""
 
 import asyncio
 import time

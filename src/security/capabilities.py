@@ -1,5 +1,5 @@
 """
-Capability-based permission system for AgentArmy.
+Capability-based permission system for Code Horde.
 
 Implements fine-grained, resource-level access control with support for
 elevated permissions, capability manifests, and comprehensive audit logging.

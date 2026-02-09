@@ -1,8 +1,8 @@
-# AgentArmy New Modules Summary
+# Code Horde New Modules Summary
 
 ## Overview
 
-Five new production-quality Python modules have been created to extend AgentArmy's multi-model system. These modules follow the existing codebase patterns:
+Five new production-quality Python modules have been created to extend Code Horde's multi-model system. These modules follow the existing codebase patterns:
 
 - Pydantic v2 models for all data structures
 - Async/await throughout
@@ -251,7 +251,7 @@ Runnable examples for:
 
 ## Architecture Integration
 
-The new modules integrate seamlessly with existing AgentArmy components:
+The new modules integrate seamlessly with existing Code Horde components:
 
 ```
 Agent (src/agents/*)
@@ -365,7 +365,7 @@ provider, model = router.route_with_language_detection(request)
 
 ## Dependencies
 
-**Required (existing in AgentArmy):**
+**Required (existing in Code Horde):**
 - pydantic>=2.0
 - structlog
 - httpx>=0.24.0
@@ -398,7 +398,7 @@ All clients:
 
 ## Migration Path
 
-For existing AgentArmy users:
+For existing Code Horde users:
 
 1. **Phase 1 (No change required):**
    - Existing code continues using Claude + Ollama

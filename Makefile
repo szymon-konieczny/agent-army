@@ -1,5 +1,5 @@
 # ============================================================================
-# AgentArmy — Makefile for macOS Local Development
+# Code Horde — Makefile for macOS Local Development
 # ============================================================================
 # Usage:
 #   make setup     — first-time setup (brew, venv, Docker, DB, keys)
@@ -39,7 +39,7 @@ help: ## Show this help
 setup: check-deps venv deps infra-up db-wait keys env-file ## First-time setup
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════╗"
-	@echo "║        AgentArmy — Setup Complete!               ║"
+	@echo "║        Code Horde — Setup Complete!               ║"
 	@echo "╚══════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "Next steps:"
@@ -139,7 +139,7 @@ infra-status: ## Show infrastructure status
 db-wait: ## Wait for PostgreSQL to be ready
 	@echo "Waiting for PostgreSQL..."
 	@for i in $$(seq 1 30); do \
-		pg_isready -h localhost -p 5432 -U agentadmin -d agent_army >/dev/null 2>&1 && break; \
+		pg_isready -h localhost -p 5432 -U agentadmin -d code_horde >/dev/null 2>&1 && break; \
 		sleep 1; \
 	done
 	@echo "PostgreSQL is ready."
@@ -171,7 +171,7 @@ deps: venv ## Install Python dependencies
 	@echo "Dependencies installed."
 
 dev: ## Start app with hot-reload
-	@echo "Starting AgentArmy (development mode)..."
+	@echo "Starting Code Horde (development mode)..."
 	@$(UVICORN) src.main:app \
 		--host 0.0.0.0 \
 		--port 8000 \
@@ -190,10 +190,10 @@ dashboard: ## Open Command Center in browser
 	@open http://localhost:8000 2>/dev/null || xdg-open http://localhost:8000 2>/dev/null || echo "Open http://localhost:8000 in your browser"
 
 app: ## Build macOS .app bundle
-	@echo "Building AgentArmy.app..."
+	@echo "Building Code Horde.app..."
 	@$(PYTHON) scripts/build_app.py
 	@echo ""
-	@echo "Run with: open dist/AgentArmy.app"
+	@echo "Run with: open dist/Code Horde.app"
 
 app-install: ## Build + install to /Applications
 	@$(PYTHON) scripts/build_app.py --install
@@ -304,7 +304,7 @@ status: ## Check health of all components
 		"import sys,json; d=json.load(sys.stdin); [print(f'  {m[\"name\"]}') for m in d.get('models',[])]" \
 		2>/dev/null || echo "  Not running (start with: ollama serve)"
 	@echo ""
-	@echo "=== AgentArmy API ==="
+	@echo "=== Code Horde API ==="
 	@curl -s http://localhost:8000/health 2>/dev/null | python3 -m json.tool 2>/dev/null \
 		|| echo "  Not running (start with: make dev)"
 

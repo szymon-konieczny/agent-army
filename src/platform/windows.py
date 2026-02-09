@@ -113,7 +113,7 @@ $textNodes = $template.GetElementsByTagName("text")
 $textNodes.Item(0).AppendChild($template.CreateTextNode("{title}")) > $null
 $textNodes.Item(1).AppendChild($template.CreateTextNode("{body}")) > $null
 $toast = [Windows.UI.Notifications.ToastNotification]::new($template)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("AgentArmy").Show($toast)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Code Horde").Show($toast)
 '''
         try:
             await _run_powershell(ps_script)
@@ -256,7 +256,7 @@ class WindowsInfraAdapter(InfraAdapter):
                 return True
             return self._try_docker(
                 "aa-postgres", "postgres:16-alpine", 5432,
-                env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "agent_army"},
+                env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "code_horde"},
             )
         logger.warning("Unknown service: %s", service)
         return False
@@ -277,16 +277,16 @@ class WindowsPathsAdapter(PathsAdapter):
     @property
     def log_dir(self) -> Path:
         appdata = os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))
-        return Path(appdata) / "AgentArmy" / "logs"
+        return Path(appdata) / "Code Horde" / "logs"
 
     @property
     def config_dir(self) -> Path:
         appdata = os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))
-        return Path(appdata) / "AgentArmy"
+        return Path(appdata) / "Code Horde"
 
     @property
     def temp_dir(self) -> Path:
-        return Path(os.environ.get("TEMP", os.environ.get("TMP", "C:\\Temp"))) / "agentarmy"
+        return Path(os.environ.get("TEMP", os.environ.get("TMP", "C:\\Temp"))) / "codehorde"
 
     @property
     def webview_gui(self) -> str:

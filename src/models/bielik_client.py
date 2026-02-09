@@ -1,4 +1,4 @@
-"""Bielik (SpeakLeash) Polish language model client for AgentArmy via Ollama.
+"""Bielik (SpeakLeash) Polish language model client for Code Horde via Ollama.
 
 Bielik is a Polish language model optimized for Polish NLP tasks.
 This client wraps Ollama but provides Bielik-specific features including:

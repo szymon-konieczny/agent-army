@@ -19,10 +19,10 @@ class ConversationStore:
         Initialize the conversation store.
 
         Args:
-            data_dir: Directory to store data. Defaults to ~/.agentarmy/
+            data_dir: Directory to store data. Defaults to ~/.codehorde/
         """
         if data_dir is None:
-            self._dir = Path.home() / ".agentarmy"
+            self._dir = Path.home() / ".codehorde"
         else:
             self._dir = Path(data_dir)
 

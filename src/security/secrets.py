@@ -1,5 +1,5 @@
 """
-Secret management module for AgentArmy.
+Secret management module for Code Horde.
 
 Provides secure secret storage with encryption at rest, rotation,
 access logging, and Vault integration support.

@@ -1,4 +1,4 @@
-"""HTTP client for communicating with the AgentArmy API from the terminal."""
+"""HTTP client for communicating with the Code Horde API from the terminal."""
 
 import asyncio
 import json
@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 
 
 class APIError(Exception):
-    """Raised when the AgentArmy API returns an error."""
+    """Raised when the Code Horde API returns an error."""
 
     def __init__(self, status_code: int, detail: str) -> None:
         self.status_code = status_code
@@ -22,8 +22,8 @@ class APIError(Exception):
         super().__init__(f"HTTP {status_code}: {detail}")
 
 
-class AgentArmyCLI:
-    """Client for the AgentArmy REST API.
+class Code HordeCLI:
+    """Client for the Code Horde REST API.
 
     Provides typed methods for every API endpoint,
     with connection pooling and automatic retries.
@@ -102,7 +102,7 @@ class AgentArmyCLI:
                     await asyncio.sleep(1.0 * attempt)
 
         raise ConnectionError(
-            f"Cannot reach AgentArmy at {self.base_url} "
+            f"Cannot reach Code Horde at {self.base_url} "
             f"after {self.max_retries} attempts: {last_exc}"
         )
 

@@ -1,4 +1,4 @@
-"""Base agent class and types for AgentArmy multi-agent system."""
+"""Base agent class and types for Code Horde multi-agent system."""
 
 import hashlib
 import hmac
@@ -100,7 +100,7 @@ class AgentHeartbeat(BaseModel):
 
 
 class BaseAgent(ABC):
-    """Abstract base class for all agents in AgentArmy.
+    """Abstract base class for all agents in Code Horde.
 
     Provides lifecycle management, capability checking, audit logging, and
     integration with the LLM router.
@@ -876,7 +876,7 @@ class BaseAgent(ABC):
         )
 
         system_prompt = (
-            f"You are {self.identity.name}, a specialized AI agent in the AgentArmy system. "
+            f"You are {self.identity.name}, a specialized AI agent in the Code Horde system. "
             f"Your role is: {self.identity.role}. "
             f"{self._get_system_context()}"
             f"{_prepend}\n\n"

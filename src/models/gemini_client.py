@@ -1,4 +1,4 @@
-"""Google Gemini client for AgentArmy with async support and token counting."""
+"""Google Gemini client for Code Horde with async support and token counting."""
 
 import asyncio
 import time

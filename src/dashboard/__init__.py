@@ -1,1 +1,1 @@
-"""Dashboard package — serves the AgentArmy Command Center UI."""
+"""Dashboard package — serves the Code Horde Command Center UI."""

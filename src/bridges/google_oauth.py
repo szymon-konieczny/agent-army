@@ -7,7 +7,7 @@ Handles the full OAuth2 lifecycle:
 - Automatic access token refresh via refresh_token
 - Backward compatibility with static AGENTARMY_GOOGLE_CALENDAR_TOKEN
 
-Token storage: ~/.agentarmy/google_tokens.json (or project-local .agentarmy/)
+Token storage: ~/.codehorde/google_tokens.json (or project-local .codehorde/)
 """
 
 import json
@@ -39,7 +39,7 @@ class GoogleOAuthTokenManager:
     1. Full OAuth2 flow (client_id + client_secret + user consent)
     2. Static Bearer token fallback (AGENTARMY_GOOGLE_CALENDAR_TOKEN env var)
 
-    Token file format (.agentarmy/google_tokens.json):
+    Token file format (.codehorde/google_tokens.json):
     {
         "access_token": "ya29.a0...",
         "refresh_token": "1//0e...",
@@ -58,15 +58,15 @@ class GoogleOAuthTokenManager:
 
         Args:
             token_path: Path to the token JSON file. Defaults to
-                        .agentarmy/google_tokens.json in the working directory
+                        .codehorde/google_tokens.json in the working directory
                         (or home directory as fallback).
         """
         if token_path:
             self.token_path = token_path
         else:
-            # Prefer project-local .agentarmy/, fall back to home dir
-            local = Path(".agentarmy") / "google_tokens.json"
-            home = Path.home() / ".agentarmy" / "google_tokens.json"
+            # Prefer project-local .codehorde/, fall back to home dir
+            local = Path(".codehorde") / "google_tokens.json"
+            home = Path.home() / ".codehorde" / "google_tokens.json"
             self.token_path = local if local.parent.exists() else home
 
         self._tokens: Optional[dict[str, Any]] = None

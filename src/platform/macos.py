@@ -489,7 +489,7 @@ class MacInfraAdapter(InfraAdapter):
                 return True
         return self._try_docker_single(
             "aa-postgres", "postgres:16-alpine", 5432,
-            env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "agent_army"},
+            env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "code_horde"},
         )
 
 
@@ -498,15 +498,15 @@ class MacPathsAdapter(PathsAdapter):
 
     @property
     def log_dir(self) -> Path:
-        return Path.home() / "Library" / "Logs" / "AgentArmy"
+        return Path.home() / "Library" / "Logs" / "Code Horde"
 
     @property
     def config_dir(self) -> Path:
-        return Path.home() / "Library" / "Application Support" / "AgentArmy"
+        return Path.home() / "Library" / "Application Support" / "Code Horde"
 
     @property
     def temp_dir(self) -> Path:
-        return Path(os.environ.get("TMPDIR", "/tmp")) / "agentarmy"
+        return Path(os.environ.get("TMPDIR", "/tmp")) / "codehorde"
 
     @property
     def webview_gui(self) -> str:

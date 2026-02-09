@@ -191,7 +191,7 @@ class DevOpsAgent(BaseAgent):
         Returns:
             Dictionary with deployment status.
         """
-        image = task.get("context", {}).get("image", "agentarmy/app")
+        image = task.get("context", {}).get("image", "codehorde/app")
         version = task.get("context", {}).get("version", "latest")
         environment = task.get("context", {}).get("environment", "staging")
         replicas = task.get("context", {}).get("replicas", 2)

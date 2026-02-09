@@ -1,6 +1,6 @@
 """Worker client — manages the worker-side lifecycle in cluster mode.
 
-When AgentArmy runs in ``worker`` mode, this module:
+When Code Horde runs in ``worker`` mode, this module:
   1. Connects to the Command Center's MCP server (streamable-HTTP).
   2. Registers this worker (sends platform, capabilities, agents).
   3. Runs a heartbeat loop to keep the Center informed.
@@ -70,7 +70,7 @@ class WorkerClient:
         self._agent_names = [a.identity.role for a in self.agents] if self.agents else []
 
         # Local MCP server for receiving dispatched tasks
-        self._local_mcp = FastMCP("agentarmy-worker")
+        self._local_mcp = FastMCP("codehorde-worker")
         self._register_worker_tools()
 
     def _collect_capabilities(self) -> list[str]:

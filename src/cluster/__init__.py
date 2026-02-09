@@ -1,4 +1,4 @@
-"""AgentArmy Cluster — multi-machine coordination via MCP.
+"""Code Horde Cluster — multi-machine coordination via MCP.
 
 Three modes:
   - standalone: Default single-instance (no clustering).

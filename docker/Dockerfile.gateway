@@ -1,5 +1,5 @@
 # ============================================================================
-# AgentArmy — API Gateway Container (Production)
+# Code Horde — API Gateway Container (Production)
 # ============================================================================
 
 FROM python:3.12-slim AS builder

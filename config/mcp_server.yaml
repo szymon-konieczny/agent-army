@@ -1,23 +1,23 @@
-# AgentArmy MCP Server Configuration
+# Code Horde MCP Server Configuration
 #
-# This configuration defines how the AgentArmy MCP server behaves,
+# This configuration defines how the Code Horde MCP server behaves,
 # what transports it supports, and how it connects to dependencies.
 #
-# The MCP server exposes AgentArmy capabilities via the Model Context Protocol,
+# The MCP server exposes Code Horde capabilities via the Model Context Protocol,
 # allowing external AI tools (Claude Code, Claude Desktop, Cursor, etc.) to
 # interact with the agent fleet.
 
 server:
   # Server identity
-  name: "agentarmy"
+  name: "codehorde"
   version: "1.0.0"
-  description: "AgentArmy — autonomous AI agent fleet via Model Context Protocol"
+  description: "Code Horde — autonomous AI agent fleet via Model Context Protocol"
 
   # Server capabilities and metadata
   metadata:
-    author: "AgentArmy Contributors"
-    github: "https://github.com/agentarmy/agentarmy"
-    documentation: "https://agentarmy.dev"
+    author: "Code Horde Contributors"
+    github: "https://github.com/codehorde/codehorde"
+    documentation: "https://codehorde.dev"
 
   # Transport configuration
   transport:
@@ -39,9 +39,9 @@ server:
         cert_path: null
         key_path: null
 
-# External MCP servers that AgentArmy agents can consume
+# External MCP servers that Code Horde agents can consume
 #
-# Add MCP servers here that you want AgentArmy agents to have access to.
+# Add MCP servers here that you want Code Horde agents to have access to.
 # Example:
 #   - name: "github"
 #     transport: "sse"
@@ -61,9 +61,9 @@ server:
 #
 external_servers: []
 
-# AgentArmy API backend configuration
+# Code Horde API backend configuration
 api:
-  # Base URL for AgentArmy HTTP API
+  # Base URL for Code Horde HTTP API
   base_url: "http://localhost:8000"
 
   # API request timeout in seconds
@@ -89,8 +89,8 @@ redis:
   # Enable/disable Redis usage
   enabled: false
 
-  # Redis key prefix for AgentArmy data
-  key_prefix: "agentarmy:"
+  # Redis key prefix for Code Horde data
+  key_prefix: "codehorde:"
 
   # Connection pool settings
   pool:

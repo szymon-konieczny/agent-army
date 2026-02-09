@@ -1,4 +1,4 @@
-"""Voice processing — STT and TTS for AgentArmy.
+"""Voice processing — STT and TTS for Code Horde.
 
 Multi-provider voice system:
 

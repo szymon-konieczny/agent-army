@@ -1,6 +1,6 @@
-# AgentArmy Multi-Model System Guide
+# Code Horde Multi-Model System Guide
 
-This guide covers the new multi-model system extensions for AgentArmy, including OpenAI, Hugging Face, Bielik (Polish), and the Recursive Language Model (RLM) engine.
+This guide covers the new multi-model system extensions for Code Horde, including OpenAI, Hugging Face, Bielik (Polish), and the Recursive Language Model (RLM) engine.
 
 ## Overview
 

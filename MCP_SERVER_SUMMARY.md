@@ -1,8 +1,8 @@
-# AgentArmy MCP Server - Complete Implementation Summary
+# Code Horde MCP Server - Complete Implementation Summary
 
 ## Overview
 
-A comprehensive Model Context Protocol (MCP) server implementation for AgentArmy, enabling external AI tools (Claude Code, Claude Desktop, Cursor) to interact with autonomous agent fleet capabilities.
+A comprehensive Model Context Protocol (MCP) server implementation for Code Horde, enabling external AI tools (Claude Code, Claude Desktop, Cursor) to interact with autonomous agent fleet capabilities.
 
 ## What Was Created
 
@@ -27,10 +27,10 @@ Key Components:
   - System Operations (2 tools)
 
 - **4 MCP Resources**:
-  - `agentarmy://status` - System status snapshot
-  - `agentarmy://agents` - Agent capabilities
-  - `agentarmy://policies` - Autonomy policies
-  - `agentarmy://trust-scores` - Agent trust profiles
+  - `codehorde://status` - System status snapshot
+  - `codehorde://agents` - Agent capabilities
+  - `codehorde://policies` - Autonomy policies
+  - `codehorde://trust-scores` - Agent trust profiles
 
 - **3 MCP Prompts**:
   - `delegate_to_army()` - Task delegation template
@@ -43,7 +43,7 @@ Key Components:
   - Ready for WebSocket addition
 
 - **HTTP Client**:
-  - Async httpx client for AgentArmy API communication
+  - Async httpx client for Code Horde API communication
   - Automatic connection pooling
   - Error handling and logging
 
@@ -79,7 +79,7 @@ Sections:
 - Server identity and metadata
 - Transport configuration (stdio, SSE with TLS options)
 - External MCP servers list
-- AgentArmy API backend settings
+- Code Horde API backend settings
 - Redis and Neo4j configuration
 - Logging with structlog
 - Security settings (auth, encryption, CORS, rate limiting)
@@ -194,7 +194,7 @@ Test Coverage:
 ## File Locations
 
 ```
-/sessions/quirky-charming-cori/mnt/agent-army/
+/sessions/quirky-charming-cori/mnt/code-horde/
 ├── src/mcp_server/
 │   ├── __init__.py                    (18 lines)
 │   ├── server.py                      (750+ lines)
@@ -271,16 +271,16 @@ Test Coverage:
 ### 1. Claude Desktop User
 ```
 "Deploy feature X to staging"
-→ Claude uses agentarmy_create_task
-→ Claude monitors with agentarmy_workflow_status
-→ Claude approves with agentarmy_approve
+→ Claude uses codehorde_create_task
+→ Claude monitors with codehorde_workflow_status
+→ Claude approves with codehorde_approve
 ```
 
 ### 2. Claude Code Integration
 ```bash
 python scripts/start_mcp.py
 # VS Code detects stdio server
-# Use AgentArmy tools in code generation
+# Use Code Horde tools in code generation
 ```
 
 ### 3. Agent Using External MCP
@@ -366,9 +366,9 @@ python scripts/start_mcp.py --transport sse --port 8001
 ### Production (Docker)
 ```yaml
 # Docker Compose setup provided
-agentarmy-mcp:
+codehorde-mcp:
   ports: [8001:8001]
-  environment: [AGENTARMY_MCP_API_URL=http://agentarmy-api:8000]
+  environment: [AGENTARMY_MCP_API_URL=http://codehorde-api:8000]
 ```
 
 ### Configuration Management
@@ -378,7 +378,7 @@ agentarmy-mcp:
 
 ## Integration Points
 
-### With AgentArmy Core
+### With Code Horde Core
 - Connects to HTTP API (localhost:8000)
 - Queries Neo4j knowledge graph
 - Uses Redis for caching (optional)
@@ -430,7 +430,7 @@ agentarmy-mcp:
 
 ## Summary
 
-This implementation provides a **production-ready MCP server** for AgentArmy with:
+This implementation provides a **production-ready MCP server** for Code Horde with:
 
 ✅ Complete tool, resource, and prompt implementation
 ✅ Multiple transport support (stdio, SSE, extensible)
@@ -445,7 +445,7 @@ This implementation provides a **production-ready MCP server** for AgentArmy wit
 
 The server is ready to:
 - Be deployed with Claude Desktop, Claude Code, Cursor
-- Enable external AI to control AgentArmy
+- Enable external AI to control Code Horde
 - Allow agents to use external MCP tools
 - Scale to production environments
 - Integrate with existing workflows

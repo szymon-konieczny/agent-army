@@ -99,10 +99,10 @@ class MemoryEntry:
 class AgentMemoryStore:
     """Persistent memory store backed by a JSON file in the project directory.
 
-    Memories are stored in `.agentarmy/memory.json` inside the project root.
+    Memories are stored in `.codehorde/memory.json` inside the project root.
     """
 
-    MEMORY_DIR = ".agentarmy"
+    MEMORY_DIR = ".codehorde"
     MEMORY_FILE = "memory.json"
 
     def __init__(self, project_dir: Optional[str] = None):

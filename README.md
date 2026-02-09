@@ -1,4 +1,4 @@
-# AgentArmy
+# Code Horde
 
 Secure multi-agent AI system for autonomous SaaS development and security monitoring.
 
@@ -18,7 +18,7 @@ Secure multi-agent AI system for autonomous SaaS development and security monito
 ### 1. Setup
 
 ```bash
-cd agent-army
+cd code-horde
 make setup
 ```
 

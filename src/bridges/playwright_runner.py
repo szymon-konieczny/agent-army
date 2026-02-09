@@ -1,4 +1,4 @@
-"""Playwright E2E test runner bridge for AgentArmy.
+"""Playwright E2E test runner bridge for Code Horde.
 
 Provides the ability to:
 - Generate Playwright test scripts from natural-language descriptions.
@@ -137,7 +137,7 @@ class PlaywrightRunner:
     async def ensure_chromium(self) -> dict[str, Any]:
         """Ensure Playwright Python + Chromium are installed.
 
-        Called once during AgentArmy startup.  Idempotent — skips if
+        Called once during Code Horde startup.  Idempotent — skips if
         Chromium is already present.
 
         Returns:
@@ -634,7 +634,7 @@ class PlaywrightRunner:
                 }
 
             if screenshot:
-                ss_dir = pathlib.Path(self._project_dir or ".") / ".agentarmy" / "screenshots"
+                ss_dir = pathlib.Path(self._project_dir or ".") / ".codehorde" / "screenshots"
                 ss_dir.mkdir(parents=True, exist_ok=True)
                 ss_path = ss_dir / f"smoke_{int(asyncio.get_event_loop().time())}.png"
                 await page.screenshot(path=str(ss_path), full_page=True)
@@ -706,7 +706,7 @@ class PlaywrightRunner:
                 follow_redirects=True,
                 timeout=30.0,
                 verify=False,
-                headers={"User-Agent": "AgentArmy-SmokeTest/1.0"},
+                headers={"User-Agent": "Code Horde-SmokeTest/1.0"},
             ) as client:
                 resp = await client.get(url)
             elapsed_ms = int((_time.monotonic() - start) * 1000)

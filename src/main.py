@@ -1,4 +1,4 @@
-"""FastAPI application and main entry point for AgentArmy system."""
+"""FastAPI application and main entry point for Code Horde system."""
 
 import asyncio
 import json
@@ -59,7 +59,7 @@ def _get_mcp_app() -> FastMCP:
     """Get or create the cluster MCP FastMCP app instance."""
     global _cluster_mcp
     if _cluster_mcp is None:
-        _cluster_mcp = FastMCP("agentarmy-center")
+        _cluster_mcp = FastMCP("codehorde-center")
     return _cluster_mcp
 
 
@@ -501,7 +501,7 @@ def create_app() -> FastAPI:
         Configured FastAPI application instance.
     """
     app = FastAPI(
-        title="AgentArmy",
+        title="Code Horde",
         description="Multi-agent autonomous system for development, security, and operations",
         version="1.0.0",
         lifespan=lifespan,
@@ -985,7 +985,7 @@ def create_app() -> FastAPI:
 
         payload = await request.json()
         to_number = payload.get("to", "").strip().replace("+", "").replace("-", "").replace(" ", "")
-        message = payload.get("message", "Hello from AgentArmy!")
+        message = payload.get("message", "Hello from Code Horde!")
 
         if not to_number:
             raise HTTPException(status_code=400, detail="Missing 'to' phone number")
@@ -1711,13 +1711,13 @@ def create_app() -> FastAPI:
 
         return {"status": "cancelled", "task_id": task_id}
 
-    # ── User preferences (persisted to .agentarmy/prefs.json) ──────
+    # ── User preferences (persisted to .codehorde/prefs.json) ──────
 
     def _prefs_path() -> Optional[pathlib.Path]:
         project_dir = _app_state.get("project_dir", "")
         if not project_dir:
             return None
-        return pathlib.Path(project_dir) / ".agentarmy" / "prefs.json"
+        return pathlib.Path(project_dir) / ".codehorde" / "prefs.json"
 
     def _load_prefs() -> dict[str, Any]:
         path = _prefs_path()

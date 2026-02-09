@@ -1,4 +1,4 @@
-# AgentArmy MCP Server - Implementation Checklist
+# Code Horde MCP Server - Implementation Checklist
 
 ## Completion Status: ✅ 100% COMPLETE
 
@@ -148,38 +148,38 @@
 #### MCP Server Tools (16 total)
 
 **Task Management (3):**
-- ✅ agentarmy_create_task - Create and auto-assign
-- ✅ agentarmy_task_status - Get task details
-- ✅ agentarmy_list_tasks - List with filtering
+- ✅ codehorde_create_task - Create and auto-assign
+- ✅ codehorde_task_status - Get task details
+- ✅ codehorde_list_tasks - List with filtering
 
 **Agent Operations (2):**
-- ✅ agentarmy_agent_status - Get all agents
-- ✅ agentarmy_ask_agent - Query agent by role
+- ✅ codehorde_agent_status - Get all agents
+- ✅ codehorde_ask_agent - Query agent by role
 
 **Workflow Execution (3):**
-- ✅ agentarmy_start_workflow - Start workflow
-- ✅ agentarmy_workflow_status - Monitor progress
-- ✅ agentarmy_approve - Approve actions
+- ✅ codehorde_start_workflow - Start workflow
+- ✅ codehorde_workflow_status - Monitor progress
+- ✅ codehorde_approve - Approve actions
 
 **Knowledge Graph (2):**
-- ✅ agentarmy_knowledge_query - Query with NLP
-- ✅ agentarmy_knowledge_add - Add entities
+- ✅ codehorde_knowledge_query - Query with NLP
+- ✅ codehorde_knowledge_add - Add entities
 
 **Security (2):**
-- ✅ agentarmy_security_scan - Trigger scan
-- ✅ agentarmy_security_report - Get results
+- ✅ codehorde_security_scan - Trigger scan
+- ✅ codehorde_security_report - Get results
 
 **System Operations (2):**
-- ✅ agentarmy_system_health - Full health check
-- ✅ agentarmy_digest - Activity summary
-- ✅ agentarmy_cost_report - Cost breakdown
+- ✅ codehorde_system_health - Full health check
+- ✅ codehorde_digest - Activity summary
+- ✅ codehorde_cost_report - Cost breakdown
 
 #### MCP Resources (4)
 
-- ✅ agentarmy://status - System status
-- ✅ agentarmy://agents - Agent capabilities
-- ✅ agentarmy://policies - Autonomy policies
-- ✅ agentarmy://trust-scores - Trust profiles
+- ✅ codehorde://status - System status
+- ✅ codehorde://agents - Agent capabilities
+- ✅ codehorde://policies - Autonomy policies
+- ✅ codehorde://trust-scores - Trust profiles
 
 #### MCP Prompts (3)
 
@@ -318,7 +318,7 @@
 - ✅ Leverage resources for context
 - ✅ Follow prompts for workflows
 
-### With AgentArmy
+### With Code Horde
 - ✅ Expose agent capabilities via MCP
 - ✅ Accept commands from Claude tools
 - ✅ Consume external MCP servers
@@ -387,4 +387,4 @@
 
 **Status: READY FOR PRODUCTION** ✅
 
-The AgentArmy MCP Server is complete, tested, documented, and ready for immediate use with Claude Desktop, Claude Code, Cursor, and other MCP-compatible tools.
+The Code Horde MCP Server is complete, tested, documented, and ready for immediate use with Claude Desktop, Claude Code, Cursor, and other MCP-compatible tools.

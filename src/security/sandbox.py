@@ -1,5 +1,5 @@
 """
-Execution sandbox module for AgentArmy.
+Execution sandbox module for Code Horde.
 
 Provides isolated execution environment with resource limits,
 process monitoring, and artifact collection.

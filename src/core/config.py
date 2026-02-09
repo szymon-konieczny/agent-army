@@ -1,4 +1,4 @@
-"""Configuration management for AgentArmy using Pydantic Settings."""
+"""Configuration management for Code Horde using Pydantic Settings."""
 
 import logging
 import secrets
@@ -18,7 +18,7 @@ class SystemSettings(BaseSettings):
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
     """
 
-    system_name: str = Field(default="AgentArmy", description="System name")
+    system_name: str = Field(default="Code Horde", description="System name")
     environment: Literal["development", "staging", "production"] = Field(
         default="development", description="Deployment environment"
     )
@@ -114,7 +114,7 @@ class DatabaseSettings(BaseSettings):
 
     host: str = Field(default="localhost", description="Database server host")
     port: int = Field(default=5432, description="Database server port", gt=0)
-    name: str = Field(default="agentarmy", description="Database name")
+    name: str = Field(default="codehorde", description="Database name")
     user: str = Field(default="postgres", description="Database user")
     password: SecretStr = Field(default=SecretStr("postgres"), description="Database password")
     pool_size: int = Field(default=20, description="Connection pool size", gt=0, le=100)

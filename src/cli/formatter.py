@@ -1,4 +1,4 @@
-"""Rich terminal formatting for AgentArmy CLI output."""
+"""Rich terminal formatting for Code Horde CLI output."""
 
 import json
 from datetime import datetime

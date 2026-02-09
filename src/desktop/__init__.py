@@ -1,1 +1,1 @@
-"""Desktop package — native macOS app wrapper for AgentArmy Command Center."""
+"""Desktop package — native macOS app wrapper for Code Horde Command Center."""

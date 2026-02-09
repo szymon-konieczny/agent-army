@@ -1,13 +1,13 @@
-# AgentArmy Deployment Guide
+# Code Horde Deployment Guide
 
 ## Overview
 
-This document provides a comprehensive guide to the AgentArmy project's Docker and configuration files created for deployment and orchestration of intelligent agents.
+This document provides a comprehensive guide to the Code Horde project's Docker and configuration files created for deployment and orchestration of intelligent agents.
 
 ## Project Structure
 
 ```
-agent-army/
+code-horde/
 ├── docker/
 │   ├── Dockerfile.agent          # Base agent container image
 │   ├── Dockerfile.gateway        # API gateway container image
@@ -384,8 +384,8 @@ CMD ["uvicorn", "src.gateway.api:app", "--host", "0.0.0.0", "--port", "8000"]
    - Maintains proper permissions (600 private, 644 public)
 
 5. **setup_docker_network()** - Creates Docker networks
-   - agent-army-internal (internal)
-   - agent-army-gateway (external)
+   - code-horde-internal (internal)
+   - code-horde-gateway (external)
 
 6. **create_directories()** - Creates project directories
    - logs, data, artifacts, keys, backups
@@ -421,7 +421,7 @@ bash scripts/setup.sh
 
 ### Step 1: Run Setup Script
 ```bash
-cd /sessions/quirky-charming-cori/mnt/agent-army
+cd /sessions/quirky-charming-cori/mnt/code-horde
 bash scripts/setup.sh
 ```
 
@@ -553,7 +553,7 @@ docker-compose exec gateway curl http://localhost:8000/health
 docker-compose ps postgres
 
 # Check database status
-docker-compose exec postgres psql -U agentadmin -d agent_army -c "SELECT 1"
+docker-compose exec postgres psql -U agentadmin -d code_horde -c "SELECT 1"
 
 # View connection logs
 docker-compose logs postgres
@@ -573,7 +573,7 @@ cat config/security_policies.yaml | grep -A 5 "token_limits"
 ### Backup Strategy
 ```bash
 # Backup volumes
-docker-compose exec postgres pg_dump -U agentadmin agent_army > backup.sql
+docker-compose exec postgres pg_dump -U agentadmin code_horde > backup.sql
 
 # Backup Redis
 docker-compose exec redis redis-cli BGSAVE
@@ -684,7 +684,7 @@ deploy:
 ### Log Query
 ```bash
 # Example: Find all build failures
-docker-compose exec postgres psql -U agentadmin -d agent_army \
+docker-compose exec postgres psql -U agentadmin -d code_horde \
   -c "SELECT * FROM logs WHERE level='ERROR' AND agent='builder'"
 ```
 
@@ -709,4 +709,4 @@ docker-compose exec postgres psql -U agentadmin -d agent_army \
 ---
 
 Generated: February 6, 2026
-AgentArmy v1.0.0
+Code Horde v1.0.0

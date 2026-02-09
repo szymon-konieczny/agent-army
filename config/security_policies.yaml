@@ -1,4 +1,4 @@
-# AgentArmy Security Policies
+# Code Horde Security Policies
 # Defines security rules, rate limits, and escalation procedures
 
 security_policies:

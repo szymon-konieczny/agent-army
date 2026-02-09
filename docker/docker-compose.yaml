@@ -4,7 +4,7 @@ services:
   # External infrastructure
   redis:
     image: redis:7-alpine
-    container_name: agent-army-redis
+    container_name: code-horde-redis
     ports:
       - "6379:6379"
     volumes:
@@ -21,7 +21,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: agent-army-rabbitmq
+    container_name: code-horde-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -41,13 +41,13 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: agent-army-postgres
+    container_name: code-horde-postgres
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER:-agentadmin}
       POSTGRES_PASSWORD: ${DB_PASS:-securepassword}
-      POSTGRES_DB: ${DB_NAME:-agent_army}
+      POSTGRES_DB: ${DB_NAME:-code_horde}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
@@ -64,7 +64,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.gateway
-    container_name: agent-army-gateway
+    container_name: code-horde-gateway
     ports:
       - "8000:8000"
     environment:
@@ -72,7 +72,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/0
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       JWT_SECRET: ${JWT_SECRET}
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
     networks:
@@ -98,14 +98,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent
-    container_name: agent-army-commander
+    container_name: code-horde-commander
     environment:
       AGENT_TYPE: commander
       AGENT_ENV: ${AGENT_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/1
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       AGENT_PRIVATE_KEY: ${COMMANDER_PRIVATE_KEY}
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
@@ -139,14 +139,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent
-    container_name: agent-army-sentinel
+    container_name: code-horde-sentinel
     environment:
       AGENT_TYPE: sentinel
       AGENT_ENV: ${AGENT_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/2
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       AGENT_PRIVATE_KEY: ${SENTINEL_PRIVATE_KEY}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
     networks:
@@ -163,7 +163,7 @@ services:
       resources:
         limits:
           cpus: '1.5'
-          memory: 1.5G
+          memory: 1536M
         reservations:
           cpus: '0.75'
           memory: 750M
@@ -179,14 +179,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent
-    container_name: agent-army-builder
+    container_name: code-horde-builder
     environment:
       AGENT_TYPE: builder
       AGENT_ENV: ${AGENT_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/3
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       AGENT_PRIVATE_KEY: ${BUILDER_PRIVATE_KEY}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
@@ -223,14 +223,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent
-    container_name: agent-army-inspector
+    container_name: code-horde-inspector
     environment:
       AGENT_TYPE: inspector
       AGENT_ENV: ${AGENT_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/4
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       AGENT_PRIVATE_KEY: ${INSPECTOR_PRIVATE_KEY}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
     volumes:
@@ -265,14 +265,14 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent
-    container_name: agent-army-watcher
+    container_name: code-horde-watcher
     environment:
       AGENT_TYPE: watcher
       AGENT_ENV: ${AGENT_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       REDIS_URL: redis://redis:6379/5
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASS:-guest}@rabbitmq:5672//
-      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-agent_army}
+      DATABASE_URL: postgresql://${DB_USER:-agentadmin}:${DB_PASS:-securepassword}@postgres:5432/${DB_NAME:-code_horde}
       AGENT_PRIVATE_KEY: ${WATCHER_PRIVATE_KEY}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
     networks:
@@ -302,12 +302,12 @@ services:
 
 networks:
   agent-net:
-    name: agent-army-internal
+    name: code-horde-internal
     driver: bridge
     internal: true
 
   gateway-net:
-    name: agent-army-gateway
+    name: code-horde-gateway
     driver: bridge
 
 volumes:

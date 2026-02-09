@@ -1,6 +1,6 @@
-# AgentArmy MCP Integration Guide
+# Code Horde MCP Integration Guide
 
-This guide shows how to integrate AgentArmy's MCP server with various AI tools and external MCP servers.
+This guide shows how to integrate Code Horde's MCP server with various AI tools and external MCP servers.
 
 ## Table of Contents
 
@@ -39,15 +39,15 @@ The configuration file location depends on your OS:
 
 ### Step 3: Add MCP Server Configuration
 
-If the file doesn't exist, create it. Add the AgentArmy MCP server:
+If the file doesn't exist, create it. Add the Code Horde MCP server:
 
 ```json
 {
   "mcpServers": {
-    "agentarmy": {
+    "codehorde": {
       "command": "python",
       "args": [
-        "/path/to/agent-army/scripts/start_mcp.py",
+        "/path/to/code-horde/scripts/start_mcp.py",
         "--transport",
         "stdio"
       ],
@@ -60,7 +60,7 @@ If the file doesn't exist, create it. Add the AgentArmy MCP server:
 }
 ```
 
-**Replace `/path/to/agent-army` with your actual path.**
+**Replace `/path/to/code-horde` with your actual path.**
 
 ### Step 4: Verify Installation
 
@@ -68,9 +68,9 @@ If the file doesn't exist, create it. Add the AgentArmy MCP server:
 2. Open a conversation
 3. Click the settings gear icon
 4. Look for "Model Context Protocol" section
-5. You should see "agentarmy" listed under connected servers
+5. You should see "codehorde" listed under connected servers
 
-### Step 5: Use AgentArmy Tools
+### Step 5: Use Code Horde Tools
 
 In any conversation, you can now:
 
@@ -80,11 +80,11 @@ I need you to help me deploy a feature. Can you:
 2. Run a security scan
 3. Monitor the deployment workflow
 
-Use the agentarmy tools available to you.
+Use the codehorde tools available to you.
 ```
 
 Claude Desktop will:
-- See available tools from AgentArmy MCP
+- See available tools from Code Horde MCP
 - Call appropriate tools during conversation
 - Display results in the chat
 - Use prompts to guide workflow
@@ -98,7 +98,7 @@ Claude Code (GitHub Copilot integration) auto-discovers MCP servers. It's easier
 ### Step 1: Start the MCP Server
 
 ```bash
-cd /path/to/agent-army
+cd /path/to/code-horde
 python scripts/start_mcp.py --transport stdio
 ```
 
@@ -114,13 +114,13 @@ Open any file in VS Code with Claude Code, and type:
 
 ```
 # Create a task to implement feature X
-# Use the agentarmy tools to create and monitor it
+# Use the codehorde tools to create and monitor it
 ```
 
 Claude Code will:
 - Detect available tools
-- Call agentarmy_create_task
-- Monitor progress with agentarmy_task_status
+- Call codehorde_create_task
+- Monitor progress with codehorde_task_status
 - Integrate results into code generation
 
 ### Step 4: Working with Agents from VS Code
@@ -129,10 +129,10 @@ Claude Code will:
 # example.py
 def deploy_feature():
     # Create task
-    # Use agentarmy MCP tools to:
-    # 1. agentarmy_create_task - create deployment task
-    # 2. agentarmy_start_workflow - start deployment workflow
-    # 3. agentarmy_workflow_status - monitor progress
+    # Use codehorde MCP tools to:
+    # 1. codehorde_create_task - create deployment task
+    # 2. codehorde_start_workflow - start deployment workflow
+    # 3. codehorde_workflow_status - monitor progress
     pass
 ```
 
@@ -159,11 +159,11 @@ Cursor has excellent MCP support through its configuration.
 ```json
 {
   "mcpServers": {
-    "agentarmy": {
+    "codehorde": {
       "type": "stdio",
       "command": "python",
       "args": [
-        "/path/to/agent-army/scripts/start_mcp.py",
+        "/path/to/code-horde/scripts/start_mcp.py",
         "--transport",
         "stdio"
       ]
@@ -177,25 +177,25 @@ Cursor has excellent MCP support through its configuration.
 - Restart Cursor
 - Open a file
 - Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux)
-- Ask Cursor to use AgentArmy tools
+- Ask Cursor to use Code Horde tools
 - Cursor will automatically list available MCP tools
 
 ### Step 4: Example Usage in Cursor
 
 ```
-@agentarmy Create a security scanning task and report findings
+@codehorde Create a security scanning task and report findings
 ```
 
 Cursor will automatically:
-- Call `agentarmy_security_scan`
-- Get results with `agentarmy_security_report`
+- Call `codehorde_security_scan`
+- Get results with `codehorde_security_report`
 - Format findings in your editor
 
 ---
 
 ## External MCP Server Integration
 
-AgentArmy agents can consume external MCP servers (GitHub, Filesystem, Database, etc.).
+Code Horde agents can consume external MCP servers (GitHub, Filesystem, Database, etc.).
 
 ### Step 1: Connect External MCP Server
 
@@ -291,14 +291,14 @@ Claude Desktop User
     ├─ "Create feature X and deploy to staging"
     │
     ▼
-AgentArmy MCP Server (Claude's view)
-    ├─ agentarmy_create_task(description="Implement feature X")
-    ├─ agentarmy_security_scan(target="all")
-    ├─ agentarmy_start_workflow(workflow_name="feature_development")
-    ├─ agentarmy_workflow_status(execution_id)
+Code Horde MCP Server (Claude's view)
+    ├─ codehorde_create_task(description="Implement feature X")
+    ├─ codehorde_security_scan(target="all")
+    ├─ codehorde_start_workflow(workflow_name="feature_development")
+    ├─ codehorde_workflow_status(execution_id)
     │
     ▼
-AgentArmy Agents (internal execution)
+Code Horde Agents (internal execution)
     ├─ Executor creates GitHub PR via GitHub MCP
     ├─ CI/CD runs (external trigger)
     ├─ Sentinel runs security scan
@@ -322,28 +322,28 @@ External MCP Servers
 
 **Claude's Action:**
 ```
-1. agentarmy_security_scan(target="all")
+1. codehorde_security_scan(target="all")
    → Returns: scan_id, findings
 
-2. agentarmy_knowledge_query(
+2. codehorde_knowledge_query(
      question="What are common remediation patterns?"
    )
    → Returns: Fix strategies from knowledge graph
 
-3. agentarmy_ask_agent(
+3. codehorde_ask_agent(
      agent_role="sentinel",
      question="What's the risk level of these findings?"
    )
    → Returns: Risk assessment
 
-4. agentarmy_create_task(
+4. codehorde_create_task(
      description="Fix critical vulnerabilities found in scan",
      priority=1,
      tags=["security", "critical"]
    )
    → Returns: task_id, assigned agent
 
-5. Monitor with agentarmy_task_status(task_id)
+5. Monitor with codehorde_task_status(task_id)
 ```
 
 **Agent Execution:**
@@ -457,7 +457,7 @@ async def dev_task_flow():
 ### Local Development
 
 ```bash
-# Terminal 1: Start AgentArmy API
+# Terminal 1: Start Code Horde API
 python -m src.api.main --host 0.0.0.0 --port 8000
 
 # Terminal 2: Start MCP Server
@@ -473,24 +473,24 @@ python scripts/start_mcp.py --transport stdio
 ```yaml
 version: '3'
 services:
-  agentarmy-api:
-    image: agentarmy:latest
+  codehorde-api:
+    image: codehorde:latest
     ports:
       - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - NEO4J_URI=bolt://neo4j:7687
 
-  agentarmy-mcp:
-    image: agentarmy-mcp:latest
+  codehorde-mcp:
+    image: codehorde-mcp:latest
     ports:
       - "8001:8001"
     environment:
-      - AGENTARMY_MCP_API_URL=http://agentarmy-api:8000
+      - AGENTARMY_MCP_API_URL=http://codehorde-api:8000
       - AGENTARMY_MCP_TRANSPORT=sse
       - AGENTARMY_MCP_SSE_PORT=8001
     depends_on:
-      - agentarmy-api
+      - codehorde-api
 
   redis:
     image: redis:7
@@ -519,10 +519,10 @@ Then configure clients to connect to `http://mcp-server:8001` (SSE).
 cat ~/.config/Claude/claude_desktop_config.json
 
 # Verify path exists
-ls /path/to/agent-army/scripts/start_mcp.py
+ls /path/to/code-horde/scripts/start_mcp.py
 
 # Try running directly
-python /path/to/agent-army/scripts/start_mcp.py --transport stdio
+python /path/to/code-horde/scripts/start_mcp.py --transport stdio
 ```
 
 **Claude Code:**
@@ -537,7 +537,7 @@ python scripts/start_mcp.py 2>&1 | grep -i ready
 ### Tools Return Empty Results
 
 ```bash
-# Check AgentArmy API is running
+# Check Code Horde API is running
 curl http://localhost:8000/api/health
 
 # Check logs
@@ -586,6 +586,6 @@ except Exception as e:
 
 ## Support
 
-- Issues: https://github.com/agentarmy/agentarmy/issues
-- Docs: https://agentarmy.dev
+- Issues: https://github.com/codehorde/codehorde/issues
+- Docs: https://codehorde.dev
 - Community: Discord (link in GitHub)

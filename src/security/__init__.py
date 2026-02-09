@@ -1,5 +1,5 @@
 """
-Security subsystem for AgentArmy.
+Security subsystem for Code Horde.
 
 This module provides comprehensive security features for multi-agent systems:
 - Authentication & Authorization (JWT, API keys, rate limiting)

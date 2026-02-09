@@ -1,4 +1,4 @@
-"""AgentArmy core module - Agent orchestration and task management system."""
+"""Code Horde core module - Agent orchestration and task management system."""
 
 from src.core.agent_base import AgentCapability, AgentIdentity, AgentState, BaseAgent
 from src.core.config import (

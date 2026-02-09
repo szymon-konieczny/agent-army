@@ -1,4 +1,4 @@
-# Autonomy Policies for AgentArmy
+# Autonomy Policies for Code Horde
 # Controls what agents can do without human approval
 #
 # TIER DEFINITIONS:
@@ -345,7 +345,7 @@ audit:
 # Integration points
 integrations:
   # Slack channel for notifications
-  slack_channel: "#agent-army"
+  slack_channel: "#code-horde"
   slack_enabled: false
 
   # Email fallback (if WhatsApp fails)
@@ -354,4 +354,4 @@ integrations:
 
   # Datadog/monitoring integration
   metrics_enabled: true
-  metrics_prefix: "agentarmy"
+  metrics_prefix: "codehorde"

@@ -1,6 +1,6 @@
 """Center-mode MCP tools — worker registration, heartbeat, dispatch.
 
-These tools are registered on the existing MCPServer when AgentArmy
+These tools are registered on the existing MCPServer when Code Horde
 runs in ``center`` mode.  Workers call these tools over streamable-HTTP
 to register themselves, send heartbeats, and receive dispatched tasks.
 
@@ -241,7 +241,7 @@ def register_center_tools(
 
     # ── MCP Resources ─────────────────────────────────────────────
 
-    @app.resource("agentarmy://workers")
+    @app.resource("codehorde://workers")
     def get_workers_resource() -> str:
         """List all connected workers as a JSON resource.
 
@@ -251,7 +251,7 @@ def register_center_tools(
         workers = registry.list_workers(include_offline=True)
         return json.dumps([w.to_dict() for w in workers], indent=2)
 
-    @app.resource("agentarmy://cluster-health")
+    @app.resource("codehorde://cluster-health")
     def get_cluster_health_resource() -> str:
         """Cluster-wide health metrics as a JSON resource.
 

@@ -1,4 +1,4 @@
-"""Agent implementations for AgentArmy system.
+"""Agent implementations for Code Horde system.
 
 Provides specialized agents for various operational roles:
 - Sentinel: Security scanning and vulnerability detection

@@ -1,4 +1,4 @@
-"""Kimi (Moonshot AI) client for AgentArmy with async support and token counting."""
+"""Kimi (Moonshot AI) client for Code Horde with async support and token counting."""
 
 import asyncio
 import time

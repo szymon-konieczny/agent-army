@@ -1,4 +1,4 @@
-"""Orchestrator for managing agents and tasks in the AgentArmy system."""
+"""Orchestrator for managing agents and tasks in the Code Horde system."""
 
 import asyncio
 import uuid

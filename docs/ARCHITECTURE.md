@@ -1,8 +1,8 @@
-# AgentArmy — Secure Multi-Agent System Architecture
+# Code Horde — Secure Multi-Agent System Architecture
 
 ## 1. Vision
 
-AgentArmy is a secure, self-hosted multi-agent AI system designed to autonomously develop, monitor, and protect SaaS applications — starting with **Prooflog** (blockchain-based tamper-proof logging). The system communicates with its operator via **WhatsApp** and is architected for future migration to a cloud-based Command Center.
+Code Horde is a secure, self-hosted multi-agent AI system designed to autonomously develop, monitor, and protect SaaS applications — starting with **Prooflog** (blockchain-based tamper-proof logging). The system communicates with its operator via **WhatsApp** and is architected for future migration to a cloud-based Command Center.
 
 ### Design Principles
 
@@ -423,7 +423,7 @@ If CRITICAL:
 ## 8. Project Structure
 
 ```
-agent-army/
+code-horde/
 ├── docs/                       # Documentation
 │   ├── ARCHITECTURE.md         # This file
 │   ├── SECURITY.md             # Security policies
@@ -544,7 +544,7 @@ agent-army/
 │   │  Isolation    │  │  (Usage)     │  │  (Agent Plugins) │ │
 │   └──────────────┘  └──────────────┘  └──────────────────┘ │
 │                                                              │
-│   Connects to local AgentArmy instances via secure tunnels   │
+│   Connects to local Code Horde instances via secure tunnels   │
 │   (WireGuard / Cloudflare Tunnel / Tailscale)               │
 └─────────────────────────────────────────────────────────────┘
 ```

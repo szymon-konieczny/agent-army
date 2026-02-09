@@ -1,4 +1,4 @@
-"""Interactive REPL (Read-Eval-Print Loop) for the AgentArmy terminal."""
+"""Interactive REPL (Read-Eval-Print Loop) for the Code Horde terminal."""
 
 import asyncio
 import readline
@@ -7,12 +7,12 @@ import signal
 import sys
 from typing import Optional
 
-from src.cli.client import AgentArmyCLI, APIError
+from src.cli.client import Code HordeCLI, APIError
 from src.cli.formatter import CLIFormatter
 
 
 # ── readline history ─────────────────────────────────────────────────
-HISTORY_FILE = ".agentarmy_history"
+HISTORY_FILE = ".codehorde_history"
 
 
 def _setup_readline() -> None:
@@ -46,7 +46,7 @@ def _setup_readline() -> None:
 
 
 class InteractiveREPL:
-    """Full-featured interactive terminal for AgentArmy.
+    """Full-featured interactive terminal for Code Horde.
 
     Supports slash commands and free-form chat:
       /status           → system health
@@ -71,7 +71,7 @@ class InteractiveREPL:
         base_url: str = "http://localhost:8000",
         timeout: float = 30.0,
     ) -> None:
-        self.api = AgentArmyCLI(base_url=base_url, timeout=timeout)
+        self.api = Code HordeCLI(base_url=base_url, timeout=timeout)
         self.fmt = CLIFormatter()
         self._running = False
 
@@ -91,10 +91,10 @@ class InteractiveREPL:
         # Check connectivity
         alive = await self.api.is_alive()
         if alive:
-            self.fmt.success("Connected to AgentArmy API")
+            self.fmt.success("Connected to Code Horde API")
         else:
             self.fmt.warning(
-                f"Cannot reach AgentArmy at {self.api.base_url} — "
+                f"Cannot reach Code Horde at {self.api.base_url} — "
                 "start with 'make dev' first"
             )
 

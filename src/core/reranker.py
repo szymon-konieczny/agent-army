@@ -1,4 +1,4 @@
-"""Code-oriented reranker for AgentArmy RAG pipelines.
+"""Code-oriented reranker for Code Horde RAG pipelines.
 
 Provides a model-agnostic reranking service that scores code fragment
 candidates against a natural-language query.  Three layers:

@@ -1,5 +1,5 @@
 # ============================================================================
-# AgentArmy — Local Development (macOS)
+# Code Horde — Local Development (macOS)
 # ============================================================================
 # Only infrastructure services. The Python app runs NATIVELY for fast
 # iteration, hot-reload, and debugger support.
@@ -53,13 +53,13 @@ services:
     environment:
       POSTGRES_USER: agentadmin
       POSTGRES_PASSWORD: localdev_secure_2026
-      POSTGRES_DB: agent_army
+      POSTGRES_DB: code_horde
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ../scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentadmin -d agent_army"]
+      test: ["CMD-SHELL", "pg_isready -U agentadmin -d code_horde"]
       interval: 10s
       timeout: 3s
       retries: 3

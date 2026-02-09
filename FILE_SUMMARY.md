@@ -1,9 +1,9 @@
-# AgentArmy Project - File Summary
+# Code Horde Project - File Summary
 
 ## Project Structure
 
 ```
-/sessions/quirky-charming-cori/mnt/agent-army/
+/sessions/quirky-charming-cori/mnt/code-horde/
 ├── pyproject.toml                     # Project configuration
 └── src/
     └── core/
@@ -180,10 +180,10 @@
 
 ```bash
 # Install the project in development mode
-pip install -e /sessions/quirky-charming-cori/mnt/agent-army
+pip install -e /sessions/quirky-charming-cori/mnt/code-horde
 
 # Or install with dev dependencies
-pip install -e "/sessions/quirky-charming-cori/mnt/agent-army[dev]"
+pip install -e "/sessions/quirky-charming-cori/mnt/code-horde[dev]"
 ```
 
 ## Code Quality

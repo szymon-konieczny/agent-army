@@ -1,5 +1,5 @@
 """
-Immutable audit trail module for AgentArmy.
+Immutable audit trail module for Code Horde.
 
 Implements hash-chained audit logging inspired by Prooflog's blockchain-style
 integrity verification. Each audit entry is cryptographically linked to the

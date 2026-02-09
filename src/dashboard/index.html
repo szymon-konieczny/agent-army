@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentArmy — Command Center</title>
+  <title>Code Horde — Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -283,7 +283,7 @@ function Header({ connected, health, onSettings }) {
             <Icon name="zap" size={18} className={connected ? 'text-brand-400' : 'text-slate-500'} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">AgentArmy</h1>
+            <h1 className="text-lg font-semibold tracking-tight">Code Horde</h1>
             <p className="text-xs text-slate-500 -mt-0.5">Command Center</p>
           </div>
         </div>
@@ -2594,7 +2594,7 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
                   <p className="text-slate-400">To enable voice input on macOS:</p>
                   <ol className="text-slate-400 mt-1 ml-3 space-y-0.5 list-decimal">
                     <li>Open <span className="text-slate-300 font-medium">System Settings</span> → <span className="text-slate-300 font-medium">Privacy & Security</span> → <span className="text-slate-300 font-medium">Microphone</span></li>
-                    <li>Find <span className="text-slate-300 font-medium">AgentArmy</span> (or your app) and toggle it <span className="text-emerald-400 font-medium">On</span></li>
+                    <li>Find <span className="text-slate-300 font-medium">Code Horde</span> (or your app) and toggle it <span className="text-emerald-400 font-medium">On</span></li>
                     <li>Restart the app, then click the mic button again</li>
                   </ol>
                   <p className="text-slate-500 mt-1 text-[10px]">Browser: click the lock icon in the address bar → Microphone → Allow</p>
@@ -2783,7 +2783,7 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
                   handleSend(e);
                 }
               }}
-              placeholder={loading ? "Type to queue next message..." : transcribing ? "Transcribing..." : listening ? "Listening..." : attachments.length > 0 ? "Add a message or send attachments..." : "Chat with AgentArmy..."}
+              placeholder={loading ? "Type to queue next message..." : transcribing ? "Transcribing..." : listening ? "Listening..." : attachments.length > 0 ? "Add a message or send attachments..." : "Chat with Code Horde..."}
               rows={1}
               style={{ maxHeight: '150px' }}
               onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'; }}
@@ -4842,7 +4842,7 @@ function App() {
 
           <div className="py-1">
             <p className="text-[10px] text-slate-600 text-center">
-              AgentArmy Command Center — polling every 5s — {Object.keys(agents).length} agents registered
+              Code Horde Command Center — polling every 5s — {Object.keys(agents).length} agents registered
             </p>
           </div>
         </div>

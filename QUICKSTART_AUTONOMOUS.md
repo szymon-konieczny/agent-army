@@ -86,7 +86,7 @@ if __name__ == "__main__":
 ## Run It
 
 ```bash
-cd /sessions/quirky-charming-cori/mnt/agent-army
+cd /sessions/quirky-charming-cori/mnt/code-horde
 python3 -m asyncio quickstart.py  # Or save above as quickstart.py
 ```
 

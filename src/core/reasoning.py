@@ -1,4 +1,4 @@
-"""Chain-of-Thought (CoT) reasoning engine for AgentArmy multi-agent system.
+"""Chain-of-Thought (CoT) reasoning engine for Code Horde multi-agent system.
 
 This module provides structured reasoning capabilities with multiple strategies
 including step-by-step reasoning, ReAct (Reason-Act-Observe), Tree of Thought,
@@ -400,7 +400,7 @@ class ChainOfThoughtEngine:
         Returns:
             System prompt string.
         """
-        return f"""You are {agent_name}, a {agent_role} in the AgentArmy system.
+        return f"""You are {agent_name}, a {agent_role} in the Code Horde system.
 {system_context}
 
 When solving tasks, think step by step. Structure your response with the following format:
@@ -469,7 +469,7 @@ Be thorough in each step but concise in your language. Clearly separate your thi
         Returns:
             System prompt string.
         """
-        return f"""You are {agent_name}, a {agent_role} in the AgentArmy system.
+        return f"""You are {agent_name}, a {agent_role} in the Code Horde system.
 {system_context}
 
 Use the ReAct (Reason-Act-Observe) framework to solve tasks iteratively:
@@ -532,7 +532,7 @@ Focus on concrete, observable actions and their outcomes."""
         Returns:
             System prompt string.
         """
-        return f"""You are {agent_name}, a {agent_role} in the AgentArmy system.
+        return f"""You are {agent_name}, a {agent_role} in the Code Horde system.
 {system_context}
 
 Use Tree of Thought reasoning: explore multiple distinct approaches to solving
@@ -595,7 +595,7 @@ feasibility, correctness, and efficiency."""
         Returns:
             System prompt string.
         """
-        return f"""You are {agent_name}, a {agent_role} in the AgentArmy system.
+        return f"""You are {agent_name}, a {agent_role} in the Code Horde system.
 {system_context}
 
 Use Self-Critique reasoning: first generate an initial solution, then critically

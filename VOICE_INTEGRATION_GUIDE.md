@@ -2,9 +2,9 @@
 
 ## Overview
 
-AgentArmy now includes production-quality voice modules for speech-to-text (STT) and text-to-speech (TTS) processing. This enables:
+Code Horde now includes production-quality voice modules for speech-to-text (STT) and text-to-speech (TTS) processing. This enables:
 
-- WhatsApp voice messages: Users send voice notes → AgentArmy transcribes, processes, and responds with audio
+- WhatsApp voice messages: Users send voice notes → Code Horde transcribes, processes, and responds with audio
 - Multi-provider support for redundancy and cost optimization
 - Excellent Polish language support via Edge-TTS
 - Local transcription options for privacy

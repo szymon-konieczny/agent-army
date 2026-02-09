@@ -1,11 +1,11 @@
-"""AgentArmy MCP Server — expose agent capabilities via Model Context Protocol.
+"""Code Horde MCP Server — expose agent capabilities via Model Context Protocol.
 
-This module implements a full MCP server that makes AgentArmy a tool provider
+This module implements a full MCP server that makes Code Horde a tool provider
 for any MCP-compatible client (Claude Code, Claude Desktop, Cursor, etc.).
 
 Dual role:
-  - AgentArmy agents USE external MCP servers (as clients)
-  - AgentArmy EXPOSES itself as an MCP server (this module)
+  - Code Horde agents USE external MCP servers (as clients)
+  - Code Horde EXPOSES itself as an MCP server (this module)
 
 The server exposes:
   - Tools: Task management, agent operations, workflows, knowledge graph, security
@@ -99,14 +99,14 @@ class SystemHealthResponse(BaseModel):
 
 
 class MCPServer:
-    """AgentArmy MCP Server implementation.
+    """Code Horde MCP Server implementation.
 
-    Exposes AgentArmy capabilities through the Model Context Protocol,
+    Exposes Code Horde capabilities through the Model Context Protocol,
     enabling external AI tools to interact with the agent fleet.
 
     Attributes:
         app: FastMCP application instance
-        api_base_url: Base URL for AgentArmy HTTP API
+        api_base_url: Base URL for Code Horde HTTP API
         api_timeout: HTTP request timeout in seconds
         redis_url: Redis connection URL (for caching, optional)
         neo4j_uri: Neo4j connection URI (for knowledge graph)
@@ -122,7 +122,7 @@ class MCPServer:
         """Initialize the MCP server.
 
         Args:
-            api_base_url: Base URL for AgentArmy API
+            api_base_url: Base URL for Code Horde API
             api_timeout: HTTP request timeout
             redis_url: Redis connection URL
             neo4j_uri: Neo4j connection URI
@@ -133,7 +133,7 @@ class MCPServer:
         self.neo4j_uri = neo4j_uri
         self._http_client: Optional[httpx.AsyncClient] = None
 
-        self.app = FastMCP("agentarmy")
+        self.app = FastMCP("codehorde")
 
         self._register_tools()
         self._register_resources()
@@ -162,7 +162,7 @@ class MCPServer:
     async def _call_api(
         self, method: str, endpoint: str, **kwargs: Any
     ) -> dict[str, Any]:
-        """Call AgentArmy HTTP API with error handling.
+        """Call Code Horde HTTP API with error handling.
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -190,14 +190,14 @@ class MCPServer:
         # Task Management Tools
 
         @self.app.tool()
-        async def agentarmy_create_task(
+        async def codehorde_create_task(
             description: str,
             priority: int = 3,
             tags: Optional[list[str]] = None,
         ) -> dict[str, Any]:
             """Create a task and assign it to the best agent automatically.
 
-            This tool creates a new task in the AgentArmy system and uses
+            This tool creates a new task in the Code Horde system and uses
             intelligent matching to assign it to the most suitable agent
             based on capabilities, current workload, and trust score.
 
@@ -229,7 +229,7 @@ class MCPServer:
                 return {"error": str(e), "status": "failed"}
 
         @self.app.tool()
-        async def agentarmy_task_status(task_id: str) -> dict[str, Any]:
+        async def codehorde_task_status(task_id: str) -> dict[str, Any]:
             """Get the current status of a specific task.
 
             Retrieve detailed information about a task including its current
@@ -252,7 +252,7 @@ class MCPServer:
                 return {"error": str(e), "task_id": task_id}
 
         @self.app.tool()
-        async def agentarmy_list_tasks(
+        async def codehorde_list_tasks(
             status: str = "all",
             limit: int = 20,
         ) -> dict[str, Any]:
@@ -286,7 +286,7 @@ class MCPServer:
         # Agent Operations
 
         @self.app.tool()
-        async def agentarmy_agent_status() -> dict[str, Any]:
+        async def codehorde_agent_status() -> dict[str, Any]:
             """Get status of all agents in the system.
 
             Retrieve comprehensive status information for every agent including
@@ -304,7 +304,7 @@ class MCPServer:
                 return {"error": str(e), "agents": []}
 
         @self.app.tool()
-        async def agentarmy_ask_agent(
+        async def codehorde_ask_agent(
             agent_role: str,
             question: str,
         ) -> dict[str, Any]:
@@ -334,7 +334,7 @@ class MCPServer:
         # Workflow Execution
 
         @self.app.tool()
-        async def agentarmy_start_workflow(
+        async def codehorde_start_workflow(
             workflow_name: str,
             context: Optional[dict[str, Any]] = None,
         ) -> dict[str, Any]:
@@ -364,7 +364,7 @@ class MCPServer:
                 return {"error": str(e), "workflow_name": workflow_name}
 
         @self.app.tool()
-        async def agentarmy_workflow_status(execution_id: str) -> dict[str, Any]:
+        async def codehorde_workflow_status(execution_id: str) -> dict[str, Any]:
             """Check the progress of a running workflow.
 
             Monitor a workflow's execution including current step, progress
@@ -384,7 +384,7 @@ class MCPServer:
                 return {"error": str(e), "execution_id": execution_id}
 
         @self.app.tool()
-        async def agentarmy_approve(request_id: str) -> dict[str, Any]:
+        async def codehorde_approve(request_id: str) -> dict[str, Any]:
             """Approve a RED-tier action waiting for human approval.
 
             Some high-risk operations (RED-tier) require explicit human approval
@@ -411,7 +411,7 @@ class MCPServer:
         # Knowledge Graph
 
         @self.app.tool()
-        async def agentarmy_knowledge_query(question: str) -> dict[str, Any]:
+        async def codehorde_knowledge_query(question: str) -> dict[str, Any]:
             """Query the Neo4j knowledge graph using natural language.
 
             Use GraphRAG to query the knowledge graph with a natural language
@@ -436,7 +436,7 @@ class MCPServer:
                 return {"error": str(e), "results": []}
 
         @self.app.tool()
-        async def agentarmy_knowledge_add(
+        async def codehorde_knowledge_add(
             entity: str,
             entity_type: str,
             relationships: Optional[list[dict[str, Any]]] = None,
@@ -473,7 +473,7 @@ class MCPServer:
         # Security
 
         @self.app.tool()
-        async def agentarmy_security_scan(target: str = "all") -> dict[str, Any]:
+        async def codehorde_security_scan(target: str = "all") -> dict[str, Any]:
             """Trigger a comprehensive security scan.
 
             Initiate security scans for dependencies, secrets, code analysis,
@@ -498,7 +498,7 @@ class MCPServer:
                 return {"error": str(e), "target": target}
 
         @self.app.tool()
-        async def agentarmy_security_report() -> dict[str, Any]:
+        async def codehorde_security_report() -> dict[str, Any]:
             """Get the latest security report.
 
             Retrieve the most recent comprehensive security report including
@@ -517,7 +517,7 @@ class MCPServer:
         # System Operations
 
         @self.app.tool()
-        async def agentarmy_system_health() -> dict[str, Any]:
+        async def codehorde_system_health() -> dict[str, Any]:
             """Perform a full system health check.
 
             Get comprehensive system status including agent availability,
@@ -538,7 +538,7 @@ class MCPServer:
                 }
 
         @self.app.tool()
-        async def agentarmy_digest() -> dict[str, Any]:
+        async def codehorde_digest() -> dict[str, Any]:
             """Get the latest activity digest.
 
             Retrieve a summary of recent agent activities, completed tasks,
@@ -555,7 +555,7 @@ class MCPServer:
                 return {"error": str(e), "events": []}
 
         @self.app.tool()
-        async def agentarmy_cost_report(period: str = "today") -> dict[str, Any]:
+        async def codehorde_cost_report(period: str = "today") -> dict[str, Any]:
             """Get LLM API cost breakdown.
 
             Retrieve cost data for LLM API calls including per-agent breakdown,
@@ -581,7 +581,7 @@ class MCPServer:
         # Code Reranker
 
         @self.app.tool()
-        async def agentarmy_rerank_code(
+        async def codehorde_rerank_code(
             query: str,
             candidates: list[dict[str, Any]],
             k: int = 32,
@@ -631,7 +631,7 @@ class MCPServer:
     def _register_resources(self) -> None:
         """Register MCP resources."""
 
-        @self.app.resource("agentarmy://status")
+        @self.app.resource("codehorde://status")
         def get_system_status() -> str:
             """Get current system status as JSON.
 
@@ -649,14 +649,14 @@ class MCPServer:
                     "agents_online": 8,
                     "agents_total": 10,
                     "pending_tasks": 12,
-                    "source": "agentarmy://status",
+                    "source": "codehorde://status",
                 }
                 return json.dumps(status, indent=2)
             except Exception as e:
                 logger.error("status_resource_failed", error=str(e))
                 return json.dumps({"error": str(e)})
 
-        @self.app.resource("agentarmy://agents")
+        @self.app.resource("codehorde://agents")
         def get_agents_resource() -> str:
             """List all agents with their capabilities.
 
@@ -695,7 +695,7 @@ class MCPServer:
                 logger.error("agents_resource_failed", error=str(e))
                 return json.dumps({"error": str(e)})
 
-        @self.app.resource("agentarmy://policies")
+        @self.app.resource("codehorde://policies")
         def get_policies() -> str:
             """Get current autonomy policies.
 
@@ -723,7 +723,7 @@ class MCPServer:
                 logger.error("policies_resource_failed", error=str(e))
                 return json.dumps({"error": str(e)})
 
-        @self.app.resource("agentarmy://trust-scores")
+        @self.app.resource("codehorde://trust-scores")
         def get_trust_scores() -> str:
             """Get trust profiles for all agents.
 
@@ -778,7 +778,7 @@ class MCPServer:
             Returns:
                 Formatted prompt for agent delegation
             """
-            return f"""You are about to delegate the following task to AgentArmy's autonomous agents.
+            return f"""You are about to delegate the following task to Code Horde's autonomous agents.
 
 Task Description:
 {task_description}
@@ -795,13 +795,13 @@ For safe delegation, structure the task with:
 - Any security requirements
 - Relevant tags (e.g., "security", "urgent", "learning")
 
-Use the agentarmy_create_task tool to delegate."""
+Use the codehorde_create_task tool to delegate."""
 
         @self.app.prompt()
         def security_review(target: str) -> str:
             """Template for security review using agents.
 
-            Guide for conducting security reviews using AgentArmy's
+            Guide for conducting security reviews using Code Horde's
             sentinel and security-focused agents.
 
             Args:
@@ -810,7 +810,7 @@ Use the agentarmy_create_task tool to delegate."""
             Returns:
                 Formatted prompt for security review
             """
-            return f"""You are initiating a security review using AgentArmy's security agents.
+            return f"""You are initiating a security review using Code Horde's security agents.
 
 Review Target: {target}
 
@@ -821,20 +821,20 @@ Security review process:
 4. Validate configuration security
 5. Generate comprehensive report
 
-AgentArmy's sentinel agent will:
+Code Horde's sentinel agent will:
 - Perform automated security scanning
 - Analyze threats and risks
 - Generate detailed reports
 - Recommend mitigations
 
-Use agentarmy_security_scan to initiate scanning.
-Use agentarmy_security_report to get results."""
+Use codehorde_security_scan to initiate scanning.
+Use codehorde_security_report to get results."""
 
         @self.app.prompt()
         def deploy(environment: str) -> str:
             """Template for deployment workflows.
 
-            Guide for using AgentArmy's deployment workflows to safely
+            Guide for using Code Horde's deployment workflows to safely
             deploy to staging or production.
 
             Args:
@@ -843,7 +843,7 @@ Use agentarmy_security_report to get results."""
             Returns:
                 Formatted prompt for deployment
             """
-            return f"""You are setting up a deployment to {environment} using AgentArmy.
+            return f"""You are setting up a deployment to {environment} using Code Horde.
 
 Pre-deployment checklist:
 1. Verify code quality and tests pass
@@ -856,9 +856,9 @@ For {environment} deployment:
 - Staging: Can proceed with automated agent execution
 - Production: Requires multiple approvals and careful orchestration
 
-Use agentarmy_start_workflow with 'deploy_{environment}' to begin.
-Monitor progress with agentarmy_workflow_status.
-Approve RED-tier actions with agentarmy_approve as needed."""
+Use codehorde_start_workflow with 'deploy_{environment}' to begin.
+Monitor progress with codehorde_workflow_status.
+Approve RED-tier actions with codehorde_approve as needed."""
 
     async def run_stdio(self) -> None:
         """Run the server with stdio transport (for MCP-compatible clients).

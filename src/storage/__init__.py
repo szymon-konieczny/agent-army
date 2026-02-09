@@ -1,4 +1,4 @@
-"""Storage and persistence layer for AgentArmy.
+"""Storage and persistence layer for Code Horde.
 
 Provides asynchronous interfaces for:
 - PostgreSQL database operations via SQLAlchemy

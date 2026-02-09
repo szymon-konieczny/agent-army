@@ -1,6 +1,6 @@
-"""AgentArmy MCP Server.
+"""Code Horde MCP Server.
 
-This package exposes AgentArmy capabilities via the Model Context Protocol (MCP),
+This package exposes Code Horde capabilities via the Model Context Protocol (MCP),
 enabling external AI tools (Claude Code, Claude Desktop, Cursor, etc.) to interact
 with the agent fleet.
 """

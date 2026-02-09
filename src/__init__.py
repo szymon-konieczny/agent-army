@@ -1,1 +1,1 @@
-"""AgentArmy — secure multi-agent AI system."""
+"""Code Horde — secure multi-agent AI system."""

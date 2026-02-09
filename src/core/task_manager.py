@@ -1,4 +1,4 @@
-"""Task lifecycle management for AgentArmy."""
+"""Task lifecycle management for Code Horde."""
 
 import asyncio
 import uuid

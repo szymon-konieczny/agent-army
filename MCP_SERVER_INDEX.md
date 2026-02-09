@@ -1,4 +1,4 @@
-# AgentArmy MCP Server - Complete Index
+# Code Horde MCP Server - Complete Index
 
 ## Quick Navigation
 
@@ -44,28 +44,28 @@ Key classes and functions:
   - `SystemHealthResponse`
 
 **16 Tools:**
-1. `agentarmy_create_task` - Create and assign task
-2. `agentarmy_task_status` - Get task details
-3. `agentarmy_list_tasks` - List filtered tasks
-4. `agentarmy_agent_status` - Get all agents status
-5. `agentarmy_ask_agent` - Query agent by role
-6. `agentarmy_start_workflow` - Start workflow
-7. `agentarmy_workflow_status` - Monitor workflow
-8. `agentarmy_approve` - Approve RED-tier action
-9. `agentarmy_knowledge_query` - Query knowledge graph
-10. `agentarmy_knowledge_add` - Add to knowledge graph
-11. `agentarmy_security_scan` - Trigger security scan
-12. `agentarmy_security_report` - Get scan results
-13. `agentarmy_system_health` - Full health check
-14. `agentarmy_digest` - Activity digest
-15. `agentarmy_cost_report` - Cost breakdown
+1. `codehorde_create_task` - Create and assign task
+2. `codehorde_task_status` - Get task details
+3. `codehorde_list_tasks` - List filtered tasks
+4. `codehorde_agent_status` - Get all agents status
+5. `codehorde_ask_agent` - Query agent by role
+6. `codehorde_start_workflow` - Start workflow
+7. `codehorde_workflow_status` - Monitor workflow
+8. `codehorde_approve` - Approve RED-tier action
+9. `codehorde_knowledge_query` - Query knowledge graph
+10. `codehorde_knowledge_add` - Add to knowledge graph
+11. `codehorde_security_scan` - Trigger security scan
+12. `codehorde_security_report` - Get scan results
+13. `codehorde_system_health` - Full health check
+14. `codehorde_digest` - Activity digest
+15. `codehorde_cost_report` - Cost breakdown
 16. *(All with comprehensive docstrings for LLM visibility)*
 
 **4 Resources:**
-- `agentarmy://status` - System status
-- `agentarmy://agents` - Agent list with capabilities
-- `agentarmy://policies` - Autonomy policies
-- `agentarmy://trust-scores` - Trust profiles
+- `codehorde://status` - System status
+- `codehorde://agents` - Agent list with capabilities
+- `codehorde://policies` - Autonomy policies
+- `codehorde://trust-scores` - Trust profiles
 
 **3 Prompts:**
 - `delegate_to_army` - Task delegation template
@@ -107,7 +107,7 @@ Key classes:
 Sections:
 - `server` - Name, version, metadata, transports
 - `external_servers` - List of external MCPs to connect
-- `api` - AgentArmy API backend configuration
+- `api` - Code Horde API backend configuration
 - `redis` - Optional Redis for caching
 - `neo4j` - Knowledge graph connection
 - `logging` - Structlog configuration
@@ -212,7 +212,7 @@ Sections:
 - **Troubleshooting** - Common issues and fixes
 - **Best Practices** - Do's and don'ts
 
-Perfect for: Integrating AgentArmy into your workflow.
+Perfect for: Integrating Code Horde into your workflow.
 
 ### Complete Reference
 
@@ -256,7 +256,7 @@ Sections:
 - **Testing** - Coverage and scenarios
 - **Performance** - Benchmarks
 - **Deployment Options** - Local, Docker, production
-- **Integration Points** - With AgentArmy and external tools
+- **Integration Points** - With Code Horde and external tools
 - **Future Enhancements** - 10 planned features
 - **Code Quality Metrics** - Type coverage, documentation, testing
 - **Summary** - High-level overview
@@ -297,15 +297,15 @@ Perfect for: Understanding what was built and why.
 
 Model Context Protocol - A standardized way for AI models to safely access external tools, resources, and data. Think of it as "how Claude talks to your tools."
 
-### MCP Server (AgentArmy's role)
+### MCP Server (Code Horde's role)
 
-AgentArmy EXPOSES itself as an MCP server via `server.py`:
-- Claude Desktop/Code/Cursor connects to AgentArmy
+Code Horde EXPOSES itself as an MCP server via `server.py`:
+- Claude Desktop/Code/Cursor connects to Code Horde
 - Gets access to 16 tools (create tasks, run security scans, etc.)
 - Uses prompts and resources for guidance
 - Can orchestrate agent workflows from Claude
 
-### MCP Client (AgentArmy's other role)
+### MCP Client (Code Horde's other role)
 
 Agents USE external MCP servers via `client_manager.py`:
 - Agents connect to GitHub, Filesystem, Database MCPs
@@ -368,7 +368,7 @@ How communication happens:
                           │ MCP Protocol (stdio/SSE)
                           ▼
             ┌─────────────────────────────┐
-            │  AgentArmy MCP Server       │
+            │  Code Horde MCP Server       │
             │  (src/mcp_server/server.py) │
             └─────────┬───────────────────┘
                       │
@@ -429,12 +429,12 @@ How communication happens:
 
 ## Support & Resources
 
-- **Code**: `/sessions/quirky-charming-cori/mnt/agent-army/src/mcp_server/`
-- **Config**: `/sessions/quirky-charming-cori/mnt/agent-army/config/mcp_server.yaml`
-- **Tests**: `/sessions/quirky-charming-cori/mnt/agent-army/tests/test_mcp_server.py`
-- **Startup**: `/sessions/quirky-charming-cori/mnt/agent-army/scripts/start_mcp.py`
-- **GitHub**: https://github.com/agentarmy/agentarmy
-- **Issues**: https://github.com/agentarmy/agentarmy/issues
+- **Code**: `/sessions/quirky-charming-cori/mnt/code-horde/src/mcp_server/`
+- **Config**: `/sessions/quirky-charming-cori/mnt/code-horde/config/mcp_server.yaml`
+- **Tests**: `/sessions/quirky-charming-cori/mnt/code-horde/tests/test_mcp_server.py`
+- **Startup**: `/sessions/quirky-charming-cori/mnt/code-horde/scripts/start_mcp.py`
+- **GitHub**: https://github.com/codehorde/codehorde
+- **Issues**: https://github.com/codehorde/codehorde/issues
 
 ---
 

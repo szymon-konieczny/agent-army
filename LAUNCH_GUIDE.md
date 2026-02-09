@@ -1,4 +1,4 @@
-# AgentArmy — MacBook Launch Guide
+# Code Horde — MacBook Launch Guide
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Before starting, make sure you have these installed:
 ## Step 1 — Navigate to the project
 
 ```bash
-cd /path/to/agent-army
+cd /path/to/code-horde
 ```
 
 ## Step 2 — Run first-time setup
@@ -109,7 +109,7 @@ aa-rabbitmq   Up (healthy)   0.0.0.0:5672->5672/tcp, 0.0.0.0:15672->15672/tcp
 aa-neo4j      Up (healthy)   0.0.0.0:7474->7474/tcp, 0.0.0.0:7687->7687/tcp
 ```
 
-## Step 6 — Launch AgentArmy
+## Step 6 — Launch Code Horde
 
 ```bash
 make dev
@@ -176,7 +176,7 @@ Open WhatsApp and send a message to your Business number:
 /status
 ```
 
-AgentArmy should respond with system status.
+Code Horde should respond with system status.
 
 Available WhatsApp commands:
 - `/status` — system health
@@ -207,7 +207,7 @@ Available WhatsApp commands:
 
 | Service | URL |
 |---------|-----|
-| AgentArmy API | http://localhost:8000 |
+| Code Horde API | http://localhost:8000 |
 | API Health | http://localhost:8000/health |
 | API Docs (Swagger) | http://localhost:8000/docs |
 | RabbitMQ Management | http://localhost:15672 (agent / agent_local_dev) |

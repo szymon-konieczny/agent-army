@@ -1,9 +1,9 @@
 """
-AgentArmy — cross-platform native desktop app.
+Code Horde — cross-platform native desktop app.
 
 Wraps the Command Center dashboard in a native window via pywebview.
 
-When launched (double-click AgentArmy.app or `make app-open`), it automatically:
+When launched (double-click Code Horde.app or `make app-open`), it automatically:
   1. Starts PostgreSQL + Redis (via platform-specific service manager)
   2. Boots the FastAPI server in a background thread
   3. Opens the dashboard in a native window (Cocoa / EdgeChromium / GTK)
@@ -32,7 +32,7 @@ from src.platform import get_infra_adapter, get_paths_adapter
 # ── Helpers ──────────────────────────────────────────────────────────
 
 def is_api_running(host: str = "127.0.0.1", port: int = 8000, timeout: float = 1.0) -> bool:
-    """Check if the AgentArmy API is reachable."""
+    """Check if the Code Horde API is reachable."""
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
@@ -137,7 +137,7 @@ class AppAPI:
 
 def create_window(
     url: str,
-    title: str = "AgentArmy — Command Center",
+    title: str = "Code Horde — Command Center",
     width: int = 1400,
     height: int = 900,
 ) -> None:
@@ -169,7 +169,7 @@ def create_window(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="AgentArmy — Desktop App",
+        description="Code Horde — Desktop App",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
@@ -217,7 +217,7 @@ def main() -> None:
         # Client mode — just connect to an existing API
         if not is_api_running(port=args.port):
             print(
-                "AgentArmy API is not running.\n"
+                "Code Horde API is not running.\n"
                 "  Start it with 'make dev' or remove --client-only\n"
             )
             sys.exit(1)

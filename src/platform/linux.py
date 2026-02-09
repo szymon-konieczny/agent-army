@@ -291,7 +291,7 @@ class LinuxInfraAdapter(InfraAdapter):
                     return True
             return self._try_docker(
                 "aa-postgres", "postgres:16-alpine", 5432,
-                env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "agent_army"},
+                env={"POSTGRES_USER": "agentadmin", "POSTGRES_PASSWORD": "localdev_secure_2026", "POSTGRES_DB": "code_horde"},
             )
         logger.warning("Unknown service: %s", service)
         return False
@@ -333,16 +333,16 @@ class LinuxPathsAdapter(PathsAdapter):
     @property
     def log_dir(self) -> Path:
         cache = os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))
-        return Path(cache) / "agentarmy" / "logs"
+        return Path(cache) / "codehorde" / "logs"
 
     @property
     def config_dir(self) -> Path:
         config = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
-        return Path(config) / "agentarmy"
+        return Path(config) / "codehorde"
 
     @property
     def temp_dir(self) -> Path:
-        return Path(os.environ.get("TMPDIR", "/tmp")) / "agentarmy"
+        return Path(os.environ.get("TMPDIR", "/tmp")) / "codehorde"
 
     @property
     def webview_gui(self) -> str:

@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-army"
+name = "code-horde"
 version = "0.1.0"
 description = "A secure multi-agent AI system with orchestration, messaging, and task management"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
-    {name = "AgentArmy Contributors", email = "team@agentarmy.dev"}
+    {name = "Code Horde Contributors", email = "team@codehorde.dev"}
 ]
 keywords = ["ai", "agents", "multi-agent", "orchestration", "asyncio"]
 classifiers = [
@@ -83,13 +83,13 @@ dev = [
 ]
 
 [project.scripts]
-agentarmy = "scripts.cli:main"
+codehorde = "scripts.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/agentarmy/agentarmy"
-Documentation = "https://agentarmy.dev"
-Repository = "https://github.com/agentarmy/agentarmy.git"
-Issues = "https://github.com/agentarmy/agentarmy/issues"
+Homepage = "https://github.com/codehorde/codehorde"
+Documentation = "https://codehorde.dev"
+Repository = "https://github.com/codehorde/codehorde.git"
+Issues = "https://github.com/codehorde/codehorde/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1,5 +1,5 @@
 """
-Threat detection module for AgentArmy.
+Threat detection module for Code Horde.
 
 Detects and alerts on security threats including prompt injection,
 anomalous behavior, secret leakage, and suspicious rate patterns.

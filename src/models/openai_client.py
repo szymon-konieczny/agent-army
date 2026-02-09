@@ -1,4 +1,4 @@
-"""OpenAI GPT client for AgentArmy with async support, tool calling, and token counting."""
+"""OpenAI GPT client for Code Horde with async support, tool calling, and token counting."""
 
 import asyncio
 import time

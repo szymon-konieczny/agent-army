@@ -209,7 +209,7 @@ class WhatsAppDigest:
         stats = self._compute_stats(entries)
 
         lines = []
-        lines.append("*AgentArmy — Status Digest*")
+        lines.append("*Code Horde — Status Digest*")
         lines.append("")
 
         # Group by agent

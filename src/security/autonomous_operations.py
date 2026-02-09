@@ -449,7 +449,7 @@ class AutonomousOperations:
             Formatted message
         """
         lines = [
-            "*AgentArmy — Action Approval Needed*",
+            "*Code Horde — Action Approval Needed*",
             "",
             f"🤖 *Agent*: {approval.agent_id.title()}",
             f"🎯 *Action*: {approval.action}",

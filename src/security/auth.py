@@ -1,5 +1,5 @@
 """
-Authentication & Authorization module for AgentArmy.
+Authentication & Authorization module for Code Horde.
 
 Provides JWT token management, API key handling, and rate limiting for agents.
 Supports token generation, validation, refresh, and distributed rate limiting.

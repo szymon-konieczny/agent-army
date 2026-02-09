@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ################################################################################
-# AgentArmy Setup Script
-# Initializes the AgentArmy project with all required dependencies and keys
+# Code Horde Setup Script
+# Initializes the Code Horde project with all required dependencies and keys
 ################################################################################
 
 set -euo pipefail
@@ -179,7 +179,7 @@ ${env_var_name}=$(printf '%s' "$private_key")" .env
 setup_docker_network() {
     log_info "Setting up Docker networks..."
 
-    local networks=("agent-army-internal" "agent-army-gateway")
+    local networks=("code-horde-internal" "code-horde-gateway")
 
     for network in "${networks[@]}"; do
         if docker network inspect "$network" &> /dev/null; then
@@ -304,7 +304,7 @@ validate_configuration() {
 
 print_success_message() {
     echo ""
-    log_success "AgentArmy setup completed successfully!"
+    log_success "Code Horde setup completed successfully!"
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
     echo "1. Update configuration files:"
@@ -312,7 +312,7 @@ print_success_message() {
     echo "   - Review config/settings.yaml for system settings"
     echo "   - Review config/security_policies.yaml for security rules"
     echo ""
-    echo "2. Start the AgentArmy system:"
+    echo "2. Start the Code Horde system:"
     echo "   docker-compose up -d"
     echo ""
     echo "3. Verify the system is running:"
@@ -338,7 +338,7 @@ print_success_message() {
 main() {
     echo ""
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║            AgentArmy Setup Script v1.0                     ║${NC}"
+    echo -e "${BLUE}║            Code Horde Setup Script v1.0                     ║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 

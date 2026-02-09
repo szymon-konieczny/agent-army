@@ -1,9 +1,9 @@
-"""MCP Client Manager — AgentArmy agents consuming external MCP servers.
+"""MCP Client Manager — Code Horde agents consuming external MCP servers.
 
-This module handles the other direction of MCP integration: AgentArmy agents
+This module handles the other direction of MCP integration: Code Horde agents
 can USE external MCP tools and resources from other MCP servers.
 
-Example external MCP servers AgentArmy might connect to:
+Example external MCP servers Code Horde might connect to:
   - GitHub MCP (repository operations, issue management)
   - Filesystem MCP (file access and manipulation)
   - Database MCP (direct database queries)
