@@ -1598,8 +1598,11 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
   const [sttError, setSttError] = useState('');
   const [sttPermission, setSttPermission] = useState('unknown'); // 'unknown' | 'prompt' | 'granted' | 'denied'
   const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const sttBaseText = useRef('');
   const sttFinalRef = useRef('');
+  const [transcribing, setTranscribing] = useState(false);  // server-side STT in progress
   const hasSpeechAPI = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const hasMicAPI = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const sttSupported = hasSpeechAPI || hasMicAPI;  // show button if either API exists
@@ -1614,111 +1617,161 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
     }
   }, []);
 
+  // ── Whisper STT: send recorded audio to server for transcription ──
+  const whisperTranscribe = useCallback(async (audioBlob) => {
+    setTranscribing(true);
+    setSttError('');
+    try {
+      const buf = await audioBlob.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const res = await api('/api/transcribe', {
+        method: 'POST',
+        body: JSON.stringify({ audio_data: b64, format: 'webm', language: null }),
+      });
+      if (res.text && res.text.trim()) {
+        const base = input;
+        const sep = base && !base.endsWith(' ') ? ' ' : '';
+        setInput((base + sep + res.text.trim()).trimEnd());
+      } else {
+        setSttError('no-speech');
+      }
+    } catch (err) {
+      console.error('Whisper transcribe failed:', err);
+      setSttError('whisper-error:' + (err.message || '').slice(0, 80));
+    } finally {
+      setTranscribing(false);
+    }
+  }, [input]);
+
+  // ── Start MediaRecorder for server-side Whisper STT ──
+  const startWhisperRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setSttPermission('granted');
+      audioChunksRef.current = [];
+
+      // Pick supported mimeType
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
+        if (blob.size > 0) whisperTranscribe(blob);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setListening(true);
+    } catch (err) {
+      console.warn('Whisper recording error:', err.name, err.message);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setSttPermission('denied');
+        setSttError('denied');
+      } else if (err.name === 'NotFoundError') {
+        setSttError('no-mic');
+      } else {
+        setSttError('mic-error:' + err.name);
+      }
+    }
+  }, [whisperTranscribe]);
+
   const toggleSTT = useCallback(async () => {
     setSttError('');
+
+    // ── Stop recording ──
     if (listening) {
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();  // triggers onstop → whisperTranscribe
+        mediaRecorderRef.current = null;
+      }
       recognitionRef.current?.stop();
       setListening(false);
       return;
     }
 
-    // Step 0: Check secure context (getUserMedia requires HTTPS or localhost)
+    // Step 0: Check secure context
     if (!window.isSecureContext) {
       setSttError('insecure');
       return;
     }
 
-    // Step 1: Request mic permission (if mediaDevices API is available)
-    // Some browsers/WebViews don't expose mediaDevices even on localhost,
-    // but SpeechRecognition can still work as it manages its own mic access.
-    if (navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Got permission — stop the stream immediately (Speech API manages its own)
-        stream.getTracks().forEach(t => t.stop());
-        setSttPermission('granted');
-      } catch (err) {
-        console.warn('Mic permission error:', err.name, err.message);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setSttPermission('denied');
-          setSttError('denied');
-        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          setSttError('no-mic');
-        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-          setSttError('mic-busy');
-        } else if (err.name === 'AbortError') {
-          setSttError('mic-abort');
-        } else {
-          setSttError('mic-error:' + err.name + ':' + (err.message || '').slice(0, 80));
-        }
-        return;
-      }
-    } else if (!hasSpeechAPI) {
-      // No mediaDevices AND no SpeechRecognition — truly unsupported
-      setSttError('no-media-api');
-      return;
-    }
-    // else: no mediaDevices but SpeechRecognition available — skip permission
-    // check and let Speech API handle mic access directly.
-
-    // Step 2: Start Speech Recognition
-    if (!hasSpeechAPI) {
-      setSttError('no-speech-api');
-      return;
-    }
-
-    try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = true;
-      recognition.continuous = true;
-      recognition.maxAlternatives = 1;
-      sttBaseText.current = input;
-      sttFinalRef.current = '';
-      recognition.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            sttFinalRef.current += transcript;
-          } else {
-            interim = transcript;
+    // ── Path A: Browser SpeechRecognition (real-time, preferred) ──
+    if (hasSpeechAPI) {
+      // Request mic permission first if mediaDevices available
+      if (navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+          setSttPermission('granted');
+        } catch (err) {
+          // Permission denied — fall through to try Whisper path
+          if (hasMicAPI && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+            setSttPermission('denied');
+            setSttError('denied');
+            return;
           }
         }
-        const base = sttBaseText.current;
-        const sep = base && !base.endsWith(' ') ? ' ' : '';
-        const display = base + sep + sttFinalRef.current + interim;
-        setInput(display.trimEnd());
-      };
-      recognition.onerror = (e) => {
-        console.warn('STT error:', e.error, e.message);
-        if (e.error === 'no-speech') {
-          setSttError('no-speech');
-        } else if (e.error === 'not-allowed') {
-          setSttError('denied');
-          setSttPermission('denied');
-        } else if (e.error === 'network') {
-          setSttError('network');
-        } else if (e.error === 'audio-capture') {
-          setSttError('no-mic');
-        } else if (e.error === 'service-not-allowed') {
-          setSttError('service-denied');
-        } else {
-          setSttError('speech-error:' + e.error);
-        }
-        setListening(false);
-      };
-      recognition.onend = () => { setListening(false); };
-      recognitionRef.current = recognition;
-      recognition.start();
-      setListening(true);
-    } catch (err) {
-      console.error('STT start failed:', err);
-      setSttError('speech-error:' + err.message);
-      setListening(false);
+      }
+
+      try {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 1;
+        sttBaseText.current = input;
+        sttFinalRef.current = '';
+        recognition.onresult = (event) => {
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              sttFinalRef.current += transcript;
+            } else {
+              interim = transcript;
+            }
+          }
+          const base = sttBaseText.current;
+          const sep = base && !base.endsWith(' ') ? ' ' : '';
+          const display = base + sep + sttFinalRef.current + interim;
+          setInput(display.trimEnd());
+        };
+        recognition.onerror = (e) => {
+          console.warn('STT error:', e.error, e.message);
+          if (e.error === 'no-speech') setSttError('no-speech');
+          else if (e.error === 'not-allowed') { setSttError('denied'); setSttPermission('denied'); }
+          else if (e.error === 'network') setSttError('network');
+          else if (e.error === 'audio-capture') setSttError('no-mic');
+          else if (e.error === 'service-not-allowed') setSttError('service-denied');
+          else setSttError('speech-error:' + e.error);
+          setListening(false);
+        };
+        recognition.onend = () => { setListening(false); };
+        recognitionRef.current = recognition;
+        recognition.start();
+        setListening(true);
+        return;
+      } catch (err) {
+        console.warn('SpeechRecognition failed, trying Whisper fallback:', err.message);
+      }
     }
-  }, [listening, hasSpeechAPI, input]);
+
+    // ── Path B: Server-side Whisper via MediaRecorder (fallback) ──
+    if (hasMicAPI) {
+      await startWhisperRecording();
+      return;
+    }
+
+    // Neither API available
+    setSttError('no-media-api');
+  }, [listening, hasSpeechAPI, hasMicAPI, input, startWhisperRecording]);
 
   const startEdit = (idx, text) => { setEditingIdx(idx); setEditText(text); };
   const cancelEdit = () => { setEditingIdx(null); setEditText(''); };
@@ -2605,6 +2658,12 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
                   <p className="text-slate-600 text-[9px] mt-0.5 font-mono">{sttError}</p>
                 </div>
               )}
+              {sttError.startsWith('whisper-error') && (
+                <div>
+                  <p className="text-red-400">Whisper transcription failed. Check that the server is running.</p>
+                  <p className="text-slate-600 text-[9px] mt-0.5 font-mono">{sttError}</p>
+                </div>
+              )}
               <button onClick={() => setSttError('')} className="mt-1.5 text-slate-500 hover:text-slate-300 underline text-[10px]">Dismiss</button>
             </div>
           )}
@@ -2724,7 +2783,7 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
                   handleSend(e);
                 }
               }}
-              placeholder={loading ? "Type to queue next message..." : listening ? "Listening..." : attachments.length > 0 ? "Add a message or send attachments..." : "Chat with AgentArmy..."}
+              placeholder={loading ? "Type to queue next message..." : transcribing ? "Transcribing..." : listening ? "Listening..." : attachments.length > 0 ? "Add a message or send attachments..." : "Chat with AgentArmy..."}
               rows={1}
               style={{ maxHeight: '150px' }}
               onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px'; }}
@@ -2737,15 +2796,19 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
             <button
               type="button"
               onClick={toggleSTT}
-              className={`rounded-lg px-3 py-2.5 transition-colors shrink-0 relative ${listening
-                ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse'
-                : sttPermission === 'denied'
-                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-500'
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
-              title={listening ? 'Stop listening' : sttPermission === 'denied' ? 'Microphone blocked — click for help' : 'Voice input'}
+              disabled={transcribing}
+              className={`rounded-lg px-3 py-2.5 transition-colors shrink-0 relative ${
+                transcribing
+                  ? 'bg-amber-700 text-amber-200 animate-pulse cursor-wait'
+                  : listening
+                    ? 'bg-red-600 hover:bg-red-500 text-white animate-pulse'
+                    : sttPermission === 'denied'
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-500'
+                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
+              title={transcribing ? 'Transcribing...' : listening ? 'Stop listening' : sttPermission === 'denied' ? 'Microphone blocked — click for help' : 'Voice input'}
             >
-              {React.createElement(Icon, { name: 'mic', size: 16 })}
-              {sttPermission === 'denied' && (
+              {React.createElement(Icon, { name: transcribing ? 'loader-2' : 'mic', size: 16, className: transcribing ? 'animate-spin' : '' })}
+              {sttPermission === 'denied' && !transcribing && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
               )}
             </button>

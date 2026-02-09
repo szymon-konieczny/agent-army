@@ -2223,6 +2223,71 @@ def create_app() -> FastAPI:
                 "command": command,
             }
 
+    # ── Whisper STT endpoint ──────────────────────────────────────────
+
+    @app.post("/api/transcribe")
+    async def transcribe_audio(request: Request) -> dict[str, Any]:
+        """Transcribe audio via Whisper (server-side STT).
+
+        Body: {"audio_data": "<base64>", "format": "webm", "language": "pl"}
+
+        Uses OpenAI Whisper if OPENAI_API_KEY is set, otherwise local
+        faster-whisper.  Accepts webm, ogg, wav, mp3, m4a formats.
+
+        Returns:
+            Dict with text, language, confidence, duration_seconds.
+        """
+        import base64
+        import os as _os
+
+        payload = await request.json()
+        audio_b64 = payload.get("audio_data", "")
+        audio_format = payload.get("format", "webm")
+        language = payload.get("language")  # None → auto-detect
+
+        if not audio_b64:
+            raise HTTPException(status_code=400, detail="audio_data is required")
+
+        try:
+            audio_bytes = base64.b64decode(audio_b64)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 audio data")
+
+        if len(audio_bytes) > 25 * 1024 * 1024:  # 25 MB max
+            raise HTTPException(status_code=413, detail="Audio too large (max 25 MB)")
+
+        # Pick STT provider: OpenAI if key available, else local Whisper
+        from src.bridges.voice import VoiceConfig, VoiceProcessor, VoiceProvider
+
+        openai_key = _os.environ.get("OPENAI_API_KEY") or _os.environ.get(
+            "AGENTARMY_OPENAI_API_KEY"
+        )
+        stt_provider = VoiceProvider.OPENAI if openai_key else VoiceProvider.LOCAL_WHISPER
+
+        config = VoiceConfig(
+            stt_provider=stt_provider,
+            openai_api_key=openai_key,
+            default_language=language or "pl",
+        )
+        processor = VoiceProcessor(config)
+
+        try:
+            result = await processor.transcribe(
+                audio_data=audio_bytes,
+                format=audio_format,
+                language=language,
+            )
+            return {
+                "text": result.text,
+                "language": result.language,
+                "confidence": result.confidence,
+                "duration_seconds": result.duration_seconds,
+                "provider": result.provider.value,
+            }
+        except Exception as exc:
+            await logger.aerror("transcribe_failed", error=str(exc)[:200])
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
+
     # ── Playwright / E2E testing endpoints ────────────────────────────
 
     @app.get("/test/e2e/status")
