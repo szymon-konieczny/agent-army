@@ -2007,6 +2007,25 @@ function ChatPanel({ messages, onSend, onEditMessage, onRetryMessage, onRunComma
         }
       }
 
+      // Bare hour: "at 8", "o 14", "@ 9" (no :MM, no am/pm)
+      if (!timeParsed) {
+        const timeBare = msg.match(/(?:at|o|@)\s*(\d{1,2})(?!\d|:|[ap])/i);
+        if (timeBare) {
+          let h = parseInt(timeBare[1], 10);
+          // Context: "morning/rano" → keep as-is; "evening/wieczorem/afternoon" → PM
+          const ml = msg.toLowerCase();
+          if (h <= 12 && /(evening|wieczor|popołud|po połudn|afternoon)/i.test(ml)) {
+            if (h < 12) h += 12;
+          }
+          // If hour is 1-7 without context, assume PM (business hours)
+          if (h >= 1 && h <= 7 && !/(morning|rano|am\b)/i.test(ml)) {
+            h += 12;
+          }
+          d.setHours(h, 0, 0, 0);
+          timeParsed = true;
+        }
+      }
+
       // Fallback: next round hour
       if (!timeParsed) {
         d.setHours(d.getHours() + 1, 0, 0, 0);
