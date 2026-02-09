@@ -7,7 +7,10 @@ from typing import Any, Optional
 
 import structlog
 
+import re
+
 from src.core.agent_base import AgentCapability, AgentIdentity, AgentState, BaseAgent
+from src.models.schemas import LLMRequest, ModelTier, SensitivityLevel
 from src.platform.base import CalendarAdapter, PlatformCapability
 from src.platform.google_calendar import GoogleCalendarAdapter
 
@@ -967,3 +970,83 @@ class SchedulerAgent(BaseAgent):
                 "summary": "Scheduling workflow — LLM unavailable for detailed analysis.",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
+
+    # ── Two-pass chat: execute commands, then format output ──────
+
+    async def _handle_chat_message(self, task: dict[str, Any]) -> dict[str, Any]:
+        """Override base chat handler to add a formatting pass.
+
+        The base handler does: LLM call → auto-execute bash → return.
+        This override adds a second LLM call that takes the raw command
+        output and produces a clean, formatted response for the user.
+        """
+        # First pass: normal LLM + bash auto-execution
+        result = await super()._handle_chat_message(task)
+        response = result.get("response", "")
+
+        # Extract raw output from collapsible <details> blocks
+        raw_outputs = re.findall(
+            r"<pre><code>(.*?)</code></pre>",
+            response,
+            re.DOTALL,
+        )
+
+        if not raw_outputs:
+            return result
+
+        # Unescape HTML entities in extracted output
+        import html as _html
+        raw_data = "\n\n".join(_html.unescape(o) for o in raw_outputs)
+
+        # Get the user's original message
+        task_payload = task.get("payload", task)
+        user_message = task_payload.get("message", "") or task_payload.get("text", "")
+
+        # Second pass: format the raw data
+        format_prompt = (
+            f"The user asked: \"{user_message}\"\n\n"
+            f"Here is the raw calendar data from the commands that were executed:\n"
+            f"```\n{raw_data}\n```\n\n"
+            f"Now produce ONLY the final clean formatted response for the user. "
+            f"Follow the RESPONSE FORMATTING rules from your system prompt. "
+            f"Output ONLY the formatted result — no explanations of what you did, "
+            f"no mentions of commands or scripts, no 'Here are the results' preamble. "
+            f"Just the formatted data (tables, summaries, etc.)."
+        )
+
+        format_request = LLMRequest(
+            prompt=format_prompt,
+            system_prompt=self._get_system_context(),
+            model_preference=ModelTier.FAST,
+            sensitivity=SensitivityLevel.INTERNAL,
+            max_tokens=2048,
+            temperature=0.3,
+        )
+
+        try:
+            providers = self._get_llm_providers()
+            for provider_name, api_key, model in providers:
+                try:
+                    client = self._create_llm_client(provider_name, api_key)
+                    llm_response = await client.complete(format_request)
+                    formatted = llm_response.content
+                    if formatted and formatted.strip():
+                        result["response"] = formatted.strip()
+                        await logger.ainfo(
+                            "scheduler_format_pass",
+                            agent_id=self.identity.id,
+                            raw_len=len(raw_data),
+                            formatted_len=len(formatted),
+                        )
+                    break
+                except Exception as exc:
+                    await logger.awarning(
+                        "scheduler_format_pass_failed",
+                        provider=provider_name,
+                        error=str(exc)[:200],
+                    )
+                    continue
+        except Exception:
+            pass  # Return unformatted result if formatting fails
+
+        return result
