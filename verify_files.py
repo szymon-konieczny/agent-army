@@ -41,7 +41,7 @@ def main():
     project_root = Path(__file__).parent
     src_dir = project_root / "src"
     
-    print("AgentArmy File Verification")
+    print("Code Horde File Verification")
     print("=" * 60)
     
     if not src_dir.exists():

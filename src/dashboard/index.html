@@ -4598,15 +4598,32 @@ function App() {
           reply = {
             role: 'assistant',
             agent: 'scout',
-            text: `Image generation failed: ${res.error || 'Unknown error'}`,
+            text: res.error || 'Image generation failed. Try a different prompt.',
+            isError: true,
           };
         }
         setChatMessages(prev => [...prev, reply]);
       }).catch(err => {
+        // Parse the raw error into a clean, human-friendly message
+        let msg = err.message || 'Request failed';
+        try {
+          // api() throws "HTTP 429: {json}" — extract the detail field
+          const jsonStart = msg.indexOf('{');
+          if (jsonStart !== -1) {
+            const parsed = JSON.parse(msg.slice(jsonStart));
+            msg = parsed.detail || parsed.error || msg;
+          }
+        } catch (_) {}
+        // Strip "HTTP NNN: " prefix if detail was extracted
+        if (!/^HTTP \d/.test(msg)) {
+          const httpMatch = err.message?.match(/^HTTP (\d+)/);
+          if (httpMatch) msg = `(${httpMatch[1]}) ${msg}`;
+        }
         setChatMessages(prev => [...prev, {
           role: 'assistant',
-          agent: 'system',
-          text: `Image generation error: ${err.message || 'Request failed'}`,
+          agent: 'scout',
+          text: msg,
+          isError: true,
         }]);
       }).finally(() => {
         setChatLoading(false);

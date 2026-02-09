@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Entry point for the AgentArmy interactive terminal.
+"""Entry point for the Code Horde interactive terminal.
 
 Usage:
     python scripts/cli.py                     # connect to localhost:8000
@@ -22,7 +22,7 @@ from src.cli.repl import InteractiveREPL
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="AgentArmy — Interactive Terminal",
+        description="Code Horde — Interactive Terminal",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--url",
         default=os.environ.get("AGENTARMY_API_URL", "http://localhost:8000"),
-        help="AgentArmy API base URL (default: $AGENTARMY_API_URL or localhost:8000)",
+        help="Code Horde API base URL (default: $AGENTARMY_API_URL or localhost:8000)",
     )
     parser.add_argument(
         "--timeout",

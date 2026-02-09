@@ -1,4 +1,4 @@
-"""Example usage of new model integrations for AgentArmy.
+"""Example usage of new model integrations for Code Horde.
 
 This file demonstrates:
 1. OpenAI client usage
@@ -376,7 +376,7 @@ async def example_enhanced_router():
 
 async def main():
     """Run all examples."""
-    print("AgentArmy Model Integration Examples")
+    print("Code Horde Model Integration Examples")
     print("=" * 50)
 
     # Basic examples (don't require external services)

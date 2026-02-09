@@ -1,4 +1,4 @@
-"""Example: Voice message integration with AgentArmy.
+"""Example: Voice message integration with Code Horde.
 
 Shows how to integrate WhatsApp voice messages with the voice processing system.
 
@@ -55,7 +55,7 @@ async def example_simple_voice_pipeline() -> None:
         print("   → (Would call OpenAI Whisper API)")
 
         # Simulated response
-        transcribed_text = "Cześć! Czy możesz mi powiedzieć coś o AgentArmy?"
+        transcribed_text = "Cześć! Czy możesz mi powiedzieć coś o Code Horde?"
 
         print(f"\n3. Received transcription:")
         print(f"   → Text: {transcribed_text}")
@@ -64,7 +64,7 @@ async def example_simple_voice_pipeline() -> None:
 
         print("\n4. Agent processes request...")
         response_text = (
-            "AgentArmy to wieloagentowy system AI z orkiestracją, "
+            "Code Horde to wieloagentowy system AI z orkiestracją, "
             "obsługą wiadomości i zarządzaniem zadaniami. "
             "Obsługuje integracje z WhatsApp, Ollama i wiele modeli LLM."
         )
@@ -117,7 +117,7 @@ async def example_multilanguage_support() -> None:
 
     config = VoiceConfig(tts_provider=VoiceProvider.EDGE_TTS)
 
-    print("\nEdge-TTS supports these languages via AgentArmy:\n")
+    print("\nEdge-TTS supports these languages via Code Horde:\n")
 
     for example in examples:
         print(f"Language: {example['language_name']} ({example['language']})")

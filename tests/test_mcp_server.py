@@ -1,4 +1,4 @@
-"""Unit tests for AgentArmy MCP Server.
+"""Unit tests for Code Horde MCP Server.
 
 Tests cover:
 - Tool definitions and invocations
@@ -28,7 +28,7 @@ logger = structlog.get_logger(__name__)
 
 
 class TestMCPServer:
-    """Test AgentArmy MCP Server."""
+    """Test Code Horde MCP Server."""
 
     @pytest.fixture
     def server(self) -> MCPServer:

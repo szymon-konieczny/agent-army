@@ -1,4 +1,4 @@
-# AgentArmy LLM Integration and Communication Bridge
+# Code Horde LLM Integration and Communication Bridge
 # Production-quality dependencies
 
 # Core async HTTP client

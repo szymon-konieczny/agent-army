@@ -1,5 +1,5 @@
 -- ============================================================================
--- AgentArmy — Database Initialization
+-- Code Horde — Database Initialization
 -- ============================================================================
 -- Creates core tables for the agent system.
 -- Runs automatically on first PostgreSQL container start.

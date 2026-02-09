@@ -2064,10 +2064,18 @@ def create_app() -> FastAPI:
                 resp = await client.post(api_url, json=payload)
 
             if resp.status_code != 200:
-                err_detail = resp.text[:500]
+                # Try to extract a clean error message from Gemini's JSON response
+                friendly_msg = ""
+                try:
+                    err_json = resp.json()
+                    friendly_msg = err_json.get("error", {}).get("message", "")
+                except Exception:
+                    pass
+                if not friendly_msg:
+                    friendly_msg = resp.text[:300]
                 raise HTTPException(
                     status_code=resp.status_code,
-                    detail=f"Gemini API error: {err_detail}",
+                    detail=friendly_msg,
                 )
 
             data = resp.json()

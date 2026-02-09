@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Start the AgentArmy MCP server.
+"""Start the Code Horde MCP server.
 
-This script launches the AgentArmy MCP (Model Context Protocol) server,
-making AgentArmy capabilities available to external AI tools.
+This script launches the Code Horde MCP (Model Context Protocol) server,
+making Code Horde capabilities available to external AI tools.
 
 Usage:
     python scripts/start_mcp.py [--transport stdio|sse] [--port 8001]

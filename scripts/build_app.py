@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Build a macOS .app bundle for AgentArmy Command Center.
+Build a macOS .app bundle for Code Horde Command Center.
 
 Creates:
-  dist/AgentArmy.app/
+  dist/Code Horde.app/
     Contents/
       Info.plist
       MacOS/
-        AgentArmy       ← shell launcher
+        Code Horde       ← shell launcher
       Resources/
         icon.icns       ← app icon (generated)
         AppIcon.png     ← source icon
@@ -28,7 +28,7 @@ import textwrap
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_DIR = os.path.join(PROJECT_ROOT, "dist")
-APP_NAME = "AgentArmy"
+APP_NAME = "Code Horde"
 APP_BUNDLE = os.path.join(DIST_DIR, f"{APP_NAME}.app")
 BUNDLE_ID = "dev.agentarmy.commandcenter"
 VERSION = "1.0.0"
@@ -168,13 +168,13 @@ def create_launcher(macos_dir: str) -> str:
     # mangled by Python.  Only PROJECT_ROOT is injected via .replace().
     script = textwrap.dedent("""\
         #!/bin/bash
-        # AgentArmy — macOS app launcher
+        # Code Horde — macOS app launcher
 
         # Log file for debugging (visible via Console.app or tail)
-        LOG="$HOME/Library/Logs/AgentArmy.log"
+        LOG="$HOME/Library/Logs/Code Horde.log"
         exec >> "$LOG" 2>&1
         echo ""
-        echo "=== AgentArmy launch $(date) ==="
+        echo "=== Code Horde launch $(date) ==="
 
         SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -196,7 +196,7 @@ def create_launcher(macos_dir: str) -> str:
 
         if [ ! -f "$PYTHON" ]; then
             echo "ERROR: venv not found at $VENV"
-            osascript -e "display dialog \\"AgentArmy virtual environment not found at:\\n$VENV\\n\\nRun:  make setup\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+            osascript -e "display dialog \\"Code Horde virtual environment not found at:\\n$VENV\\n\\nRun:  make setup\\" with title \\"Code Horde\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
             exit 1
         fi
 
@@ -205,7 +205,7 @@ def create_launcher(macos_dir: str) -> str:
         # Check pywebview is installed
         if ! "$PYTHON" -c "import webview" 2>/dev/null; then
             echo "ERROR: pywebview not installed"
-            osascript -e "display dialog \\"pywebview is not installed.\\n\\nRun:  pip install pywebview\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+            osascript -e "display dialog \\"pywebview is not installed.\\n\\nRun:  pip install pywebview\\" with title \\"Code Horde\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
             exit 1
         fi
 
@@ -223,7 +223,7 @@ def create_launcher(macos_dir: str) -> str:
         EXIT_CODE=$?
         if [ $EXIT_CODE -ne 0 ]; then
             echo "ERROR: app exited with code $EXIT_CODE"
-            osascript -e "display dialog \\"AgentArmy crashed (exit code $EXIT_CODE).\\n\\nCheck log: $LOG\\" with title \\"AgentArmy\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
+            osascript -e "display dialog \\"Code Horde crashed (exit code $EXIT_CODE).\\n\\nCheck log: $LOG\\" with title \\"Code Horde\\" buttons {\\"OK\\"} default button \\"OK\\" with icon caution"
         fi
     """).replace("__PROJECT_ROOT__", PROJECT_ROOT)
 
@@ -243,7 +243,7 @@ def create_info_plist(contents_dir: str, icon_name: str) -> str:
     plist_path = os.path.join(contents_dir, "Info.plist")
 
     info = {
-        "CFBundleDisplayName": "AgentArmy",
+        "CFBundleDisplayName": "Code Horde",
         "CFBundleName": APP_NAME,
         "CFBundleIdentifier": BUNDLE_ID,
         "CFBundleVersion": VERSION,
