@@ -497,32 +497,34 @@ class SchedulerAgent(BaseAgent):
 
         # ── Local calendar (macOS Calendar.app, etc.) ──
         if has_local:
-            macos_templates = "\n".join(
-                f"  - **{info['label']}**: {info['description']}"
-                for key, info in MACOS_CALENDAR_SCRIPTS.items()
-            )
+            # Build copy-paste ready script blocks for each template
+            script_blocks = []
+            for key, info in MACOS_CALENDAR_SCRIPTS.items():
+                script = info["script"].strip()
+                script_blocks.append(
+                    f"### {info['label']}\n"
+                    f"{info['description']}\n"
+                    f"```applescript\n{script}\n```"
+                )
+            all_scripts = "\n\n".join(script_blocks)
             sections.append(
                 "## LOCAL CALENDAR (AppleScript / osascript)\n"
-                "You can read and create events in the local Calendar.app:\n"
-                f"{macos_templates}\n\n"
-                "### HOW TO RUN SCRIPTS\n"
-                "For **reading** events, write the exact script from the templates above "
-                "to a temp file and run with: `osascript /tmp/calendar_script.scpt`\n\n"
-                "For **creating** events, use the create_event template with arguments:\n"
-                "```bash\n"
-                "cat > /tmp/cal_create.scpt << 'APPLESCRIPT'\n"
-                "<paste the create_event script template exactly as provided above>\n"
-                "APPLESCRIPT\n"
-                "osascript /tmp/cal_create.scpt \"Meeting with Tom\" \"2026-02-10T14:00\" \"2026-02-10T15:00\" \"Notes here\"\n"
-                "```\n"
-                "Date arguments MUST be ISO format: `YYYY-MM-DDTHH:MM` (e.g. `2026-02-10T14:00`).\n\n"
-                "⚠️ CRITICAL RULES:\n"
-                "- NEVER write your own AppleScript for creating events — always use the template above.\n"
-                "- NEVER use `date \"...\"` coercion — it is locale-dependent and WILL FAIL on non-English macOS.\n"
-                "- NEVER hardcode calendar names like \"Calendar\" — always use `default calendar`.\n"
-                "- NEVER set date properties (year, month, day, hours, minutes) individually inline — "
-                "the template already handles this correctly.\n"
-                "- Always capture output with bash command substitution.\n"
+                "This macOS system has Calendar.app. Below are the **EXACT** scripts you must use.\n"
+                "⚠️ **NEVER write your own AppleScript.** The user's macOS is in Polish locale and\n"
+                "custom scripts WILL FAIL. Copy-paste these templates VERBATIM.\n\n"
+                f"{all_scripts}\n\n"
+                "### HOW TO RUN\n"
+                "1. Write the script to a temp file with `cat > /tmp/cal.scpt << 'APPLESCRIPT'`\n"
+                "2. Run with `osascript /tmp/cal.scpt` (for read scripts) or\n"
+                "   `osascript /tmp/cal.scpt \"Title\" \"2026-02-10T14:00\" \"2026-02-10T15:00\"` (for create_event)\n\n"
+                "⚠️ CRITICAL RULES — VIOLATION WILL CAUSE ERRORS:\n"
+                "- ALWAYS copy-paste the script templates EXACTLY as shown above.\n"
+                "- NEVER write your own AppleScript — not even small modifications.\n"
+                "- NEVER use `use framework`, `NSDate`, `NSCalendar`, or any Foundation framework.\n"
+                "- NEVER use `date \"...\"` coercion — it fails on non-English macOS.\n"
+                "- NEVER hardcode calendar names — the templates use `default calendar` or iterate `calendars`.\n"
+                "- NEVER add `use AppleScript version` or `use scripting additions` headers.\n"
+                "- Date arguments for create_event MUST be ISO format: `YYYY-MM-DDTHH:MM`.\n"
             )
         else:
             sections.append(
