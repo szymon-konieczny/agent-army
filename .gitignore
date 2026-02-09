@@ -114,3 +114,4 @@ screenshots/
 *.pid
 *.seed
 .cache/
+.agentarmy/
